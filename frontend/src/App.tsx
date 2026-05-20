@@ -97,7 +97,8 @@ export default function AppRouter() {
             <Route path="logs" element={<AdminLogs />} />
           </Route>
         </Routes>
-      </AuthInitializer>
+      </BrowserRouter>
+    </AuthInitializer>
     </QueryClientProvider>
   )
 }

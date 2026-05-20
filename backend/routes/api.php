@@ -23,10 +23,12 @@ Route::get('/categorias', function () {
 });
 
 // Guest auth routes (throttled)
-Route::controller(AuthController::class)->group(function () {
-    Route::post('/login', 'login')->middleware('throttle:5,1');
-    Route::post('/register', 'register')->middleware('throttle:3,1');
-});
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+
+// Register stub (implemented in next step)
+Route::post('/register', function () {
+    return response()->json(['message' => 'Register endpoint - coming soon'], 501);
+})->middleware('throttle:3,1');
 
 // Protected routes (Sanctum)
 Route::middleware('auth:sanctum')->group(function () {
