@@ -11,6 +11,7 @@ use App\Mail\ResetPasswordMail;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -138,7 +139,8 @@ class AuthController extends Controller
         }
 
         // Check token expiration (60 minutes)
-        $expiresAt = $record->created_at->addMinutes(60);
+        $createdAt = Carbon::parse($record->created_at);
+        $expiresAt = $createdAt->addMinutes(60);
         if (now()->gt($expiresAt)) {
             DB::table('password_reset_tokens')->where('email', $request->email)->delete();
             return response()->json([
