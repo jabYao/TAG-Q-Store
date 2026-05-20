@@ -42,6 +42,8 @@ jobs:
       - name: Environment
         run: |
           cp .env.example .env
+          sed -i 's/^DB_DATABASE=tag_q$/DB_DATABASE=tag_q_testing/' .env
+          sed -i 's/^DB_PASSWORD=$/DB_PASSWORD=root/' .env
           php artisan key:generate
 
       - name: Migrate
