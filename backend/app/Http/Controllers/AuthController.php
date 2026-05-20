@@ -77,7 +77,10 @@ class AuthController extends Controller
     {
         if ($request->user()) {
             // Revoke current token if using Bearer auth
-            $request->user()->currentAccessToken()->delete();
+            $token = $request->user()->currentAccessToken();
+            if ($token) {
+                $token->delete();
+            }
         }
 
         // Log out of session

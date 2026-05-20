@@ -107,9 +107,10 @@ export default function PublicLayout() {
                       )}
                       <hr className="my-1 border-gray-100" />
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           setShowUserMenu(false)
-                          logout()
+                          await logout()
+                          navigate('/')
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
                       >
