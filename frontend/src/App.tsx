@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import PublicLayout from '@/components/PublicLayout'
 import AdminLayout from '@/components/AdminLayout'
+import PrivateRoute from '@/components/PrivateRoute'
+import AdminRoute from '@/components/AdminRoute'
+import GuestRoute from '@/components/GuestRoute'
 import Home from '@/pages/public/Home'
 import Catalog from '@/pages/public/Catalog'
 import ProductDetail from '@/pages/public/ProductDetail'
@@ -61,28 +64,38 @@ export default function AppRouter() {
         <Routes>
           {/* Public routes */}
           <Route element={<PublicLayout />}>
+            {/* Public — sin restricción */}
             <Route path="/" element={<Home />} />
             <Route path="/catalogo" element={<Catalog />} />
             <Route path="/categoria/:slug" element={<Catalog />} />
             <Route path="/busqueda" element={<Catalog />} />
             <Route path="/producto/:slug" element={<ProductDetail />} />
             <Route path="/carrito" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/registro" element={<Register />} />
-            <Route path="/recuperacion" element={<ForgotPassword />} />
-            <Route path="/recuperacion/:token" element={<ForgotPassword />} />
-            <Route path="/perfil" element={<Profile />} />
-            <Route path="/mis-pedidos" element={<MyOrders />} />
-            <Route path="/mis-pedidos/:id" element={<OrderDetail />} />
-            <Route path="/direcciones" element={<Addresses />} />
             <Route path="/landing/:slug" element={<Landing />} />
             <Route path="/politicas" element={<Policies />} />
             <Route path="/contacto" element={<Contact />} />
+
+            {/* Solo invitados (si ya está logueado, redirige a /) */}
+            <Route element={<GuestRoute />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/registro" element={<Register />} />
+              <Route path="/recuperacion" element={<ForgotPassword />} />
+              <Route path="/recuperacion/:token" element={<ForgotPassword />} />
+            </Route>
+
+            {/* Requiere autenticación */}
+            <Route element={<PrivateRoute />}>
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/perfil" element={<Profile />} />
+              <Route path="/mis-pedidos" element={<MyOrders />} />
+              <Route path="/mis-pedidos/:id" element={<OrderDetail />} />
+              <Route path="/direcciones" element={<Addresses />} />
+            </Route>
           </Route>
 
-          {/* Admin routes */}
-          <Route path="/admin" element={<AdminLayout />}>
+          {/* Admin routes — requieren rol admin u operador */}
+          <Route path="/admin" element={<AdminRoute />}>
+            <Route element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="productos" element={<AdminProducts />} />
             <Route path="productos/nuevo" element={<AdminProductForm />} />
@@ -95,6 +108,7 @@ export default function AppRouter() {
             <Route path="roles" element={<AdminRoles />} />
             <Route path="configuracion" element={<AdminSettings />} />
             <Route path="logs" element={<AdminLogs />} />
+            </Route>
           </Route>
         </Routes>
       </BrowserRouter>
