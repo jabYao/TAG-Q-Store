@@ -127,11 +127,12 @@
 
 > Al trabajar la tarjeta de producto, activar la skill `skillsTarjetaUI-frontend` antes de proponer cambios.
 
-### Fase 4 — Autenticación, roles y seguridad ⏳
-- [ ] Login/logout, registro, recuperación
-- [ ] Middleware por rol
-- [ ] Rutas protegidas
-- [ ] Seeds de roles
+### Fase 4 — Autenticación, roles y seguridad ✅
+- [x] Login/logout, registro, recuperación de contraseña
+- [x] Middleware por rol (admin + operador)
+- [x] Rutas protegidas (PrivateRoute, GuestRoute, AdminRoute)
+- [x] Seeds de roles, permisos y usuarios
+- [x] Tests de integración (19 tests)
 
 ### Fase 5 — Catálogo, producto e imágenes ⏳
 - [ ] Entidades: Producto, Categoría, Imagen, Brand, Attribute, Inventory
