@@ -55,6 +55,21 @@ export async function logout(): Promise<void> {
 }
 
 /**
+ * Register a new user.
+ */
+export async function register(data: {
+  name: string
+  email: string
+  phone: string
+  password: string
+  password_confirmation: string
+}): Promise<LoginResponse> {
+  await getCsrfCookie()
+  const res = await api.post<LoginResponse>('/register', data)
+  return res.data
+}
+
+/**
  * Fetch current authenticated user.
  */
 export async function fetchUser(): Promise<User> {

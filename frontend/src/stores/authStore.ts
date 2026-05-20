@@ -1,6 +1,14 @@
 import { create } from 'zustand'
 import type { User } from '@/api/auth'
-import { login as apiLogin, logout as apiLogout, fetchUser } from '@/api/auth'
+import { login as apiLogin, logout as apiLogout, register as apiRegister, fetchUser } from '@/api/auth'
+
+interface RegisterData {
+  name: string
+  email: string
+  phone: string
+  password: string
+  password_confirmation: string
+}
 
 interface AuthState {
   user: User | null
@@ -8,6 +16,7 @@ interface AuthState {
   loading: boolean
   error: string | null
   login: (email: string, password: string) => Promise<void>
+  register: (data: RegisterData) => Promise<void>
   logout: () => Promise<void>
   checkAuth: () => Promise<void>
   clearError: () => void
@@ -32,6 +41,24 @@ export const useAuthStore = create<AuthState>((set) => ({
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         'Error al iniciar sesión'
+      set({ loading: false, error: message })
+      throw err
+    }
+  },
+
+  register: async (data: RegisterData) => {
+    set({ loading: true, error: null })
+    try {
+      const res = await apiRegister(data)
+      set({
+        user: res.user,
+        authenticated: true,
+        loading: false,
+      })
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Error al registrarse'
       set({ loading: false, error: message })
       throw err
     }
