@@ -82,18 +82,23 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        if ($request->user()) {
+        $user = $request->user();
+
+        if ($user) {
             // Revoke current token if using Bearer auth
-            $token = $request->user()->currentAccessToken();
+            $token = $user->currentAccessToken();
             if ($token) {
                 $token->delete();
             }
         }
 
-        // Log out of session
+        // Log out of web session (if using SPA auth)
         Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json(['message' => 'Sesión cerrada correctamente.']);
     }
