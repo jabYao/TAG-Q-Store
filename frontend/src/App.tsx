@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useAuthStore } from '@/stores/authStore'
 import PublicLayout from '@/components/PublicLayout'
 import AdminLayout from '@/components/AdminLayout'
 import Home from '@/pages/public/Home'
@@ -40,9 +42,20 @@ const queryClient = new QueryClient({
   },
 })
 
+function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const checkAuth = useAuthStore((s) => s.checkAuth)
+
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
+
+  return <>{children}</>
+}
+
 export default function AppRouter() {
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthInitializer>
       <BrowserRouter>
         <ToastContainer />
         <Routes>
@@ -84,7 +97,7 @@ export default function AppRouter() {
             <Route path="logs" element={<AdminLogs />} />
           </Route>
         </Routes>
-      </BrowserRouter>
+      </AuthInitializer>
     </QueryClientProvider>
   )
 }

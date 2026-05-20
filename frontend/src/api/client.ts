@@ -10,11 +10,14 @@ const api = axios.create({
   withXSRFToken: true,
 })
 
-// Interceptor: redirect on 401
+// Interceptor: redirect on 401 (but not for auth check endpoints)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !window.location.pathname.startsWith('/login')) {
+    const url = error.config?.url || ''
+    const isAuthEndpoint = url === '/user' || url === '/sanctum/csrf-cookie'
+
+    if (error.response?.status === 401 && !isAuthEndpoint && !window.location.pathname.startsWith('/login')) {
       window.location.href = '/login'
     }
     return Promise.reject(error)

@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useCartStore } from '@/stores/cartStore'
+import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/stores/toastStore'
 
 const navLinks = [
@@ -17,6 +18,8 @@ export default function PublicLayout() {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const cartCount = useCartStore((s) => s.count)
+  const { user, authenticated, logout } = useAuthStore()
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,9 +68,61 @@ export default function PublicLayout() {
 
             {/* Icons */}
             <div className="flex items-center gap-4">
-              <Link to="/login" className="text-gray-400 hover:text-primary transition-colors text-xl" aria-label="Mi cuenta">
-                👤
-              </Link>
+              {authenticated && user ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="text-gray-400 hover:text-primary transition-colors text-sm flex items-center gap-1.5"
+                    aria-label="Mi cuenta"
+                  >
+                    <span className="text-xl">👤</span>
+                    <span className="hidden md:inline text-xs font-medium text-carbon max-w-[100px] truncate">
+                      {user.name}
+                    </span>
+                  </button>
+                  {showUserMenu && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
+                      <Link
+                        to="/perfil"
+                        className="block px-4 py-2 text-sm text-carbon hover:bg-gray-50"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        Mi Perfil
+                      </Link>
+                      <Link
+                        to="/mis-pedidos"
+                        className="block px-4 py-2 text-sm text-carbon hover:bg-gray-50"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        Mis Pedidos
+                      </Link>
+                      {user.roles.includes('admin') && (
+                        <Link
+                          to="/admin"
+                          className="block px-4 py-2 text-sm text-primary hover:bg-gray-50 font-medium"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Panel Admin
+                        </Link>
+                      )}
+                      <hr className="my-1 border-gray-100" />
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false)
+                          logout()
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
+                      >
+                        Cerrar Sesión
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link to="/login" className="text-gray-400 hover:text-primary transition-colors text-xl" aria-label="Iniciar sesión">
+                  👤
+                </Link>
+              )}
               <Link to="/carrito" className="text-primary hover:text-primary-dark transition-colors text-xl relative" aria-label="Carrito">
                 🛒
                 {cartCount > 0 && (

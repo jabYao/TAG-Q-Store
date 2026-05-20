@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -21,24 +22,16 @@ Route::get('/categorias', function () {
     return response()->json(['data' => []]);
 });
 
-// Guest auth routes
-Route::post('/login', function (Request $request) {
-    return response()->json(['message' => 'Login endpoint'], 501);
+// Guest auth routes (throttled)
+Route::controller(AuthController::class)->group(function () {
+    Route::post('/login', 'login')->middleware('throttle:5,1');
+    Route::post('/register', 'register')->middleware('throttle:3,1');
 });
 
-Route::post('/register', function (Request $request) {
-    return response()->json(['message' => 'Register endpoint'], 501);
-});
-
-Route::post('/logout', function () {
-    return response()->json(['message' => 'Logout endpoint'], 501);
-});
-
-// Protected routes
+// Protected routes (Sanctum)
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/carrito', function () {
         return response()->json(['data' => []]);
@@ -53,8 +46,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-// Admin routes (TODO: add admin middleware in Phase 4)
-Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+// Admin routes (Sanctum + admin middleware)
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', function () {
         return response()->json(['message' => 'Admin dashboard']);
     });
