@@ -25,6 +25,8 @@ Route::get('/categorias', function () {
 // Guest auth routes (throttled)
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:3,1');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:3,1');
 
 // Protected routes (Sanctum)
 Route::middleware('auth:sanctum')->group(function () {

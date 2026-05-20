@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ForgotPasswordRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\ResetPasswordRequest;
 use App\Http\Resources\UserResource;
+use App\Mail\ResetPasswordMail;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -89,6 +95,68 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Sesión cerrada correctamente.']);
+    }
+
+    /**
+     * Send password reset link to the user's email.
+     */
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        $email = $request->email;
+
+        // Generate a random token
+        $token = Str::random(60);
+
+        // Store/update token in password_reset_tokens table
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            ['token' => $token, 'created_at' => now()]
+        );
+
+        // Send email with the reset link
+        Mail::to($email)->send(new ResetPasswordMail($token, $email));
+
+        return response()->json([
+            'message' => 'Si el correo está registrado, recibirás un link de recuperación.',
+        ]);
+    }
+
+    /**
+     * Reset password using token.
+     */
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->where('token', $request->token)
+            ->first();
+
+        if (! $record) {
+            return response()->json([
+                'message' => 'Token inválido o expirado.',
+            ], 400);
+        }
+
+        // Check token expiration (60 minutes)
+        $expiresAt = $record->created_at->addMinutes(60);
+        if (now()->gt($expiresAt)) {
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            return response()->json([
+                'message' => 'Token expirado. Solicitá un nuevo link de recuperación.',
+            ], 400);
+        }
+
+        // Update password
+        $user = User::where('email', $request->email)->first();
+        $user->password = bcrypt($request->password);
+        $user->save();
+
+        // Delete used token
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return response()->json([
+            'message' => 'Contraseña actualizada correctamente.',
+        ]);
     }
 
     /**

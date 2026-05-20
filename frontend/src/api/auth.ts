@@ -70,6 +70,27 @@ export async function register(data: {
 }
 
 /**
+ * Send password reset link.
+ */
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>('/forgot-password', { email })
+  return data
+}
+
+/**
+ * Reset password with token.
+ */
+export async function resetPassword(data: {
+  email: string
+  token: string
+  password: string
+  password_confirmation: string
+}): Promise<{ message: string }> {
+  const res = await api.post<{ message: string }>('/reset-password', data)
+  return res.data
+}
+
+/**
  * Fetch current authenticated user.
  */
 export async function fetchUser(): Promise<User> {
