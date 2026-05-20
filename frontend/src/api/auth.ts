@@ -1,4 +1,5 @@
 import api from '@/api/client'
+import axios from 'axios'
 
 export interface User {
   id: number
@@ -22,9 +23,15 @@ export interface AuthError {
 /**
  * Get CSRF cookie before making stateful requests.
  * Required for Sanctum SPA authentication.
+ *
+ * Uses a separate axios instance without /api prefix because
+ * Sanctum registers this route outside the api prefix.
  */
 export async function getCsrfCookie(): Promise<void> {
-  await api.get('/sanctum/csrf-cookie')
+  await axios.get('/sanctum/csrf-cookie', {
+    baseURL: '',
+    withCredentials: true,
+  })
 }
 
 /**
