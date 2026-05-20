@@ -1,15 +1,16 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import AuthLoading from '@/components/AuthLoading'
 
 /**
  * Redirects to / if the user does not have admin or operador role.
- * Shows nothing while auth state is being loaded.
+ * Shows a spinner while auth state is being loaded.
  */
 export default function AdminRoute() {
   const { user, authenticated, loading } = useAuthStore()
 
   if (loading) {
-    return null
+    return <AuthLoading />
   }
 
   if (!authenticated || !user) {
