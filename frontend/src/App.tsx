@@ -1,39 +1,50 @@
-import { useEffect } from 'react'
+import { lazy, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { HelmetProvider } from 'react-helmet-async'
 import { useAuthStore } from '@/stores/authStore'
 import PublicLayout from '@/components/PublicLayout'
 import AdminLayout from '@/components/AdminLayout'
 import PrivateRoute from '@/components/PrivateRoute'
 import AdminRoute from '@/components/AdminRoute'
 import GuestRoute from '@/components/GuestRoute'
-import Home from '@/pages/public/Home'
-import Catalog from '@/pages/public/Catalog'
-import ProductDetail from '@/pages/public/ProductDetail'
-import Cart from '@/pages/public/Cart'
-import Checkout from '@/pages/public/Checkout'
-import Login from '@/pages/auth/Login'
-import Register from '@/pages/auth/Register'
-import ForgotPassword from '@/pages/auth/ForgotPassword'
-import Profile from '@/pages/public/Profile'
-import MyOrders from '@/pages/public/MyOrders'
-import OrderDetail from '@/pages/public/OrderDetail'
-import Addresses from '@/pages/public/Addresses'
-import Landing from '@/pages/public/Landing'
-import Policies from '@/pages/public/Policies'
-import Contact from '@/pages/public/Contact'
-import AdminDashboard from '@/pages/admin/Dashboard'
-import AdminProducts from '@/pages/admin/AdminProducts'
-import AdminProductForm from '@/pages/admin/AdminProductForm'
-import AdminCategories from '@/pages/admin/AdminCategories'
-import AdminImages from '@/pages/admin/AdminImages'
-import AdminOrders from '@/pages/admin/AdminOrders'
-import AdminOrderDetail from '@/pages/admin/AdminOrderDetail'
-import AdminClients from '@/pages/admin/AdminClients'
-import AdminRoles from '@/pages/admin/AdminRoles'
-import AdminSettings from '@/pages/admin/AdminSettings'
-import AdminLogs from '@/pages/admin/AdminLogs'
+import { PageSkeleton } from '@/components/PageSkeleton'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import ToastContainer from '@/components/Toast'
+
+// ─── Public pages (lazy) ───
+const Home = lazy(() => import('@/pages/public/Home'))
+const Catalog = lazy(() => import('@/pages/public/Catalog'))
+const ProductDetail = lazy(() => import('@/pages/public/ProductDetail'))
+const Cart = lazy(() => import('@/pages/public/Cart'))
+const Checkout = lazy(() => import('@/pages/public/Checkout'))
+const Profile = lazy(() => import('@/pages/public/Profile'))
+const MyOrders = lazy(() => import('@/pages/public/MyOrders'))
+const OrderDetail = lazy(() => import('@/pages/public/OrderDetail'))
+const Addresses = lazy(() => import('@/pages/public/Addresses'))
+const Landing = lazy(() => import('@/pages/public/Landing'))
+const Policies = lazy(() => import('@/pages/public/Policies'))
+const Contact = lazy(() => import('@/pages/public/Contact'))
+
+// ─── Auth pages (lazy) ───
+const Login = lazy(() => import('@/pages/auth/Login'))
+const Register = lazy(() => import('@/pages/auth/Register'))
+const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'))
+
+// ─── Admin pages — chunk separado (solo se carga si el usuario es admin) ───
+const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'))
+const AdminProducts = lazy(() => import('@/pages/admin/AdminProducts'))
+const AdminProductForm = lazy(() => import('@/pages/admin/AdminProductForm'))
+const AdminBrands = lazy(() => import('@/pages/admin/AdminBrands'))
+const AdminCategories = lazy(() => import('@/pages/admin/AdminCategories'))
+const AdminHeroes = lazy(() => import('@/pages/admin/AdminHeroes'))
+const AdminImages = lazy(() => import('@/pages/admin/AdminImages'))
+const AdminOrders = lazy(() => import('@/pages/admin/AdminOrders'))
+const AdminOrderDetail = lazy(() => import('@/pages/admin/AdminOrderDetail'))
+const AdminClients = lazy(() => import('@/pages/admin/AdminClients'))
+const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'))
+const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'))
+const AdminLogs = lazy(() => import('@/pages/admin/AdminLogs'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +68,8 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
 export default function AppRouter() {
   return (
+    <HelmetProvider>
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthInitializer>
       <BrowserRouter>
@@ -94,13 +107,16 @@ export default function AppRouter() {
           </Route>
 
           {/* Admin routes — requieren rol admin u operador */}
+          {/* AdminLayout ya tiene un Suspense interno para lazy loading */}
           <Route path="/admin" element={<AdminRoute />}>
             <Route element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="productos" element={<AdminProducts />} />
             <Route path="productos/nuevo" element={<AdminProductForm />} />
             <Route path="productos/:id/editar" element={<AdminProductForm />} />
+            <Route path="marcas" element={<AdminBrands />} />
             <Route path="categorias" element={<AdminCategories />} />
+            <Route path="heroes" element={<AdminHeroes />} />
             <Route path="imagenes" element={<AdminImages />} />
             <Route path="pedidos" element={<AdminOrders />} />
             <Route path="pedidos/:id" element={<AdminOrderDetail />} />
@@ -114,5 +130,7 @@ export default function AppRouter() {
       </BrowserRouter>
     </AuthInitializer>
     </QueryClientProvider>
+    </ErrorBoundary>
+    </HelmetProvider>
   )
 }

@@ -1,3 +1,4 @@
+import SEO from '@/components/SEO'
 import { Link } from 'react-router-dom'
 
 const sections = [
@@ -73,6 +74,7 @@ Todos los pagos se procesan de forma segura a través de la plataforma Wompi. No
 export default function Policies() {
   return (
     <div className="max-w-4xl mx-auto px-4 lg:px-6 py-8">
+      <SEO title="Políticas" description="Términos y condiciones, política de privacidad y políticas de envío y devolución de TAG-Q." url="/politicas" />
       {/* Breadcrumb */}
       <nav className="text-xs text-gray-400 mb-6">
         <Link to="/" className="hover:text-primary">Home</Link>

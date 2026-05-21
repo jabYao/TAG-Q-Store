@@ -1,249 +1,226 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useCartStore } from '@/stores/cartStore'
-import ProductCard from '@/components/ProductCard'
+import { Link, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchCart, updateCartItem, removeFromCart, clearCart } from '@/api'
+import SEO from '@/components/SEO'
 import { CartSkeleton } from '@/components/Skeleton'
+import { toast } from '@/stores/toastStore'
 
-const recommendedProducts = [
-  { name: 'Tommy Hilfiger Classic', slug: 'tommy-classic', price: 145000, originalPrice: undefined, badge: undefined },
-  { name: 'Casio Vintage', slug: 'casio-vintage', price: 89000, originalPrice: 120000, badge: { label: '-26%', variant: 'gold' as const } },
-  { name: 'Titan Edge Automatic', slug: 'titan-edge', price: 320000, originalPrice: undefined, badge: undefined },
-  { name: 'Guess Ultra Thin', slug: 'guess-ultra', price: 195000, originalPrice: undefined, badge: { label: 'NUEVO', variant: 'primary' as const } },
-]
-
-// Mock initial cart items
-const initialItems = [
-  {
-    id: 1,
-    product_id: 1,
-    name: 'Tommy Hilfiger Chronograph',
-    price: 250000,
-    quantity: 1,
-    image_url: '',
-    variant: '38mm · Plateado',
-  },
-  {
-    id: 2,
-    product_id: 2,
-    name: 'Casio Vintage',
-    price: 89000,
-    quantity: 1,
-    image_url: '',
-    variant: 'Dorado · 36mm',
-  },
-]
+const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 
 export default function Cart() {
-  const [loading, setLoading] = useState(true)
-  const { items, count, total } = useCartStore()
+  return (
+    <>
+      <SEO
+        title="Carrito de Compras"
+        description="Revisá tu carrito de compras en TAG-Q. Finalizá tu pedido con envío gratis desde $400.000 COP."
+        url="/carrito"
+      />
+      <CartContent />
+    </>
+  )
+}
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 500)
-    return () => clearTimeout(timer)
-  }, [])
+function CartContent() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
-  if (loading) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['cart'],
+    queryFn: fetchCart,
+    retry: false,
+  })
+
+  const cart = data?.data
+
+  const updateQtyMutation = useMutation({
+    mutationFn: ({ id, quantity }: { id: number; quantity: number }) => updateCartItem(id, quantity),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cart'] }),
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Error al actualizar'),
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: removeFromCart,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] })
+      toast.success('Producto eliminado')
+    },
+  })
+
+  const clearMutation = useMutation({
+    mutationFn: clearCart,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] })
+      toast.success('Carrito vaciado')
+    },
+  })
+
+  if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+        <h1 className="text-2xl md:text-3xl font-semibold text-carbon mb-6">Carrito</h1>
         <CartSkeleton />
       </div>
     )
   }
-  const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 
-  // Use store items if not empty, otherwise use initial mock data
-  const cartItems = items.length > 0 ? items : initialItems
-  const cartCount = count > 0 ? count : initialItems.reduce((acc, i) => acc + i.quantity, 0)
-  const cartTotal = total > 0 ? total : initialItems.reduce((acc, i) => acc + i.price * i.quantity, 0)
-  const shipping = cartTotal >= 400000 ? 0 : 15000
-  const finalTotal = cartTotal + shipping
+  const items = cart?.items ?? []
+  const subtotal = cart?.subtotal ?? 0
+  const shippingFreeMinimum = 400000
+  const shippingCost = subtotal >= shippingFreeMinimum ? 0 : 15000
+  const remainingForFree = shippingFreeMinimum - subtotal
+  const total = subtotal + shippingCost
 
   return (
-    <div>
-      {/* Breadcrumb */}
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 pt-4 pb-2">
-        <nav className="text-xs text-gray-400">
-          <Link to="/" className="hover:text-primary">Home</Link>
-          <span className="mx-1">/</span>
-          <span className="text-carbon">Carrito</span>
-        </nav>
+    <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-semibold text-carbon">Carrito</h1>
+          <p className="text-sm text-gray-400 mt-1">
+            {items.length === 0 ? 'Tu carrito está vacío' : `${cart!.count} producto(s) en tu carrito`}
+          </p>
+        </div>
+        {items.length > 0 && (
+          <button onClick={() => clearMutation.mutate()}
+            className="text-sm text-red-500 hover:underline">
+            Vaciar carrito
+          </button>
+        )}
       </div>
 
-      {/* Title */}
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 pb-6">
-        <h1 className="text-2xl md:text-3xl font-semibold text-carbon">
-          Tu Carrito
-        </h1>
-        <p className="text-sm text-gray-400 mt-1">{cartCount} producto{cartCount !== 1 ? 's' : ''}</p>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 pb-12">
+      {items.length === 0 ? (
+        <div className="text-center py-16">
+          <span className="text-6xl">🛒</span>
+          <h2 className="text-lg font-semibold text-carbon mt-4">Tu carrito está vacío</h2>
+          <p className="text-sm text-gray-400 mt-2">Agregá productos para empezar tu compra</p>
+          <Link to="/catalogo"
+            className="inline-block mt-6 bg-primary text-white px-8 py-3 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-all duration-200">
+            VER CATÁLOGO
+          </Link>
+        </div>
+      ) : (
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Items */}
-          <div className="flex-1 min-w-0 space-y-4">
-            {cartItems.length === 0 ? (
-              /* Empty state */
-              <div className="text-center py-16">
-                <span className="text-5xl">🛒</span>
-                <h2 className="text-xl font-semibold text-carbon mt-4">Tu carrito está vacío</h2>
-                <p className="text-sm text-gray-400 mt-2 mb-6">
-                  Agregá productos para empezar tu compra
-                </p>
-                <Link
-                  to="/catalogo"
-                  className="inline-block bg-primary text-white px-8 py-3 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-all"
-                >
-                  EXPLORAR PRODUCTOS →
-                </Link>
+          <div className="flex-1 space-y-4">
+            {/* Free shipping progress */}
+            {remainingForFree > 0 ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
+                🚚 ¡Agregá <strong>{formatPrice(remainingForFree)}</strong> más para obtener <strong>envío gratis</strong>!
               </div>
             ) : (
-              <>
-                {cartItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex gap-4 p-4 bg-white border border-gray-100 rounded-xl shadow-sm"
-                  >
-                    {/* Image */}
-                    <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-50 rounded-xl flex items-center justify-center shrink-0 border border-gray-100">
-                      <span className="text-3xl">⌚</span>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700">
+                🚚 ¡Tenés <strong>envío gratis</strong> en tu compra!
+              </div>
+            )}
+
+            {items.map((item) => (
+              <div key={item.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex gap-4">
+                {/* Image */}
+                <Link to={`/producto/${item.slug}`} className="w-20 h-20 md:w-24 md:h-24 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                  {item.image_url ? (
+                    <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl">⌚</span>
+                  )}
+                </Link>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <Link to={`/producto/${item.slug}`} className="text-sm font-semibold text-carbon hover:text-primary transition-colors line-clamp-1">
+                    {item.name}
+                  </Link>
+                  <p className="text-xs text-gray-400 mt-0.5">{formatPrice(item.price)} c/u</p>
+
+                  <div className="flex items-center justify-between mt-3">
+                    {/* Quantity selector */}
+                    <div className="flex items-center border border-gray-200 rounded-lg">
+                      <button
+                        onClick={() => {
+                          if (item.quantity <= 1) {
+                            removeMutation.mutate(item.id)
+                          } else {
+                            updateQtyMutation.mutate({ id: item.id, quantity: item.quantity - 1 })
+                          }
+                        }}
+                        className="px-2.5 py-1.5 text-carbon hover:bg-gray-50 transition-colors text-sm"
+                      >
+                        −
+                      </button>
+                      <span className="px-3 py-1.5 text-sm font-medium text-carbon border-x border-gray-200 min-w-[32px] text-center">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => updateQtyMutation.mutate({ id: item.id, quantity: item.quantity + 1 })}
+                        disabled={item.quantity >= item.stock}
+                        className="px-2.5 py-1.5 text-carbon hover:bg-gray-50 transition-colors text-sm disabled:opacity-40"
+                      >
+                        +
+                      </button>
                     </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        to={`/producto/${item.product_id}`}
-                        className="text-sm md:text-base font-semibold text-carbon hover:text-primary transition-colors line-clamp-1"
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-carbon">
+                        {formatPrice(item.price * item.quantity)}
+                      </span>
+                      <button
+                        onClick={() => removeMutation.mutate(item.id)}
+                        className="text-xs text-gray-400 hover:text-red-500 transition-colors"
                       >
-                        {item.name}
-                      </Link>
-                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{(item as any).variant || 'Reloj de cuarzo'}</p>
-
-                      <div className="flex items-center justify-between mt-3">
-                        {/* Price */}
-                        <span className="text-base md:text-lg font-bold text-primary">
-                          {formatPrice(item.price)}
-                        </span>
-
-                        {/* Quantity */}
-                        <div className="flex items-center border border-gray-200 rounded-lg">
-                          <button className="px-2.5 py-1.5 text-carbon hover:bg-gray-50 transition-colors text-sm">
-                            −
-                          </button>
-                          <span className="px-3 py-1.5 text-sm font-medium text-carbon border-x border-gray-200 min-w-[32px] text-center">
-                            {item.quantity}
-                          </span>
-                          <button className="px-2.5 py-1.5 text-carbon hover:bg-gray-50 transition-colors text-sm">
-                            +
-                          </button>
-                        </div>
-
-                        {/* Remove */}
-                        <button className="text-gray-300 hover:text-red-500 transition-colors text-lg p-1">
-                          ✕
-                        </button>
-                      </div>
+                        ✕
+                      </button>
                     </div>
                   </div>
-                ))}
-
-                {/* Continue shopping */}
-                <Link
-                  to="/catalogo"
-                  className="inline-block text-sm text-primary hover:underline mt-2"
-                >
-                  ← Seguir comprando
-                </Link>
-              </>
-            )}
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Summary sidebar */}
-          {cartItems.length > 0 && (
-            <div className="w-full lg:w-[380px] shrink-0">
-              <div className="lg:sticky lg:top-6 bg-white border border-gray-100 rounded-xl shadow-sm p-6 space-y-4">
-                <h2 className="text-lg font-semibold text-carbon">Resumen del pedido</h2>
+          <div className="w-full lg:w-[380px] shrink-0">
+            <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm sticky top-24">
+              <h2 className="text-sm font-semibold text-carbon uppercase tracking-wide mb-4">Resumen</h2>
 
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Subtotal ({cartCount})</span>
-                    <span className="text-carbon font-medium">{formatPrice(cartTotal)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Envío</span>
-                    <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-carbon'}>
-                      {shipping === 0 ? 'Gratis' : formatPrice(shipping)}
-                    </span>
-                  </div>
-                  {shipping > 0 && (
-                    <p className="text-xs text-gold font-medium">
-                      🚚 Agregá {formatPrice(400000 - cartTotal)} más para envío gratis
-                    </p>
-                  )}
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Subtotal</span>
+                  <span className="font-medium text-carbon">{formatPrice(subtotal)}</span>
                 </div>
-
-                <hr className="border-gray-100" />
-
-                <div className="flex justify-between text-lg">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Envío</span>
+                  <span className={`font-medium ${shippingCost === 0 ? 'text-green-600' : 'text-carbon'}`}>
+                    {shippingCost === 0 ? 'GRATIS' : formatPrice(shippingCost)}
+                  </span>
+                </div>
+                <div className="border-t border-gray-100 pt-3 flex justify-between">
                   <span className="font-semibold text-carbon">Total</span>
-                  <span className="font-bold text-primary">{formatPrice(finalTotal)}</span>
+                  <span className="font-bold text-lg text-carbon">{formatPrice(total)}</span>
                 </div>
+              </div>
 
-                <Link
-                  to="/checkout"
-                  className="block w-full bg-primary text-white text-center py-3.5 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-all duration-200"
-                >
-                  INICIAR CHECKOUT →
-                </Link>
+              <button
+                onClick={() => navigate('/checkout')}
+                className="w-full mt-6 bg-primary text-white py-3 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-all duration-200"
+              >
+                INICIAR CHECKOUT →
+              </button>
 
-                {/* Coupon */}
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1">¿Tenés un cupón?</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Código"
-                      className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <button className="px-4 py-2 bg-carbon text-white text-sm rounded-lg font-medium hover:bg-gray-800 transition-colors">
-                      Aplicar
-                    </button>
-                  </div>
-                </div>
+              <Link to="/catalogo"
+                className="block text-center mt-3 text-xs text-gray-400 hover:text-primary transition-colors">
+                ← Seguir comprando
+              </Link>
 
-                {/* Trust badges */}
-                <div className="pt-2 space-y-2 text-xs text-gray-400">
-                  <div className="flex items-center gap-2">
-                    <span>🚚</span> Envío gratis desde $400.000
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>🔄</span> 30 días de cambio gratis
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>💳</span> Pago seguro con Wompi
-                  </div>
+              {/* Payment methods */}
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <p className="text-[10px] text-gray-300 text-center uppercase tracking-wider">Métodos de pago aceptados</p>
+                <div className="flex justify-center gap-3 mt-2 text-xs text-gray-400">
+                  <span>💳 Wompi</span>
+                  <span>💰 Contraentrega</span>
                 </div>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Recommended */}
-        {cartItems.length > 0 && (
-          <div className="mt-12 pt-8 border-t border-gray-100">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl md:text-2xl font-semibold text-carbon">Completá tu look</h2>
-              <Link to="/catalogo" className="text-sm text-primary hover:underline">
-                Ver todos →
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {recommendedProducts.map((p) => (
-                <ProductCard key={p.slug} {...p} />
-              ))}
-            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import SEO from '@/components/SEO'
 
 type FieldErrors = {
   name?: string
@@ -57,7 +58,9 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-12">
+    <>
+      <SEO title="Crear Cuenta" description="Creá tu cuenta en TAG-Q para acceder a tus pedidos, direcciones y más." url="/registro" />
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-[440px]">
         <div className="bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-8 md:p-10">
           {/* Logo */}
@@ -239,5 +242,6 @@ export default function Register() {
         </div>
       </div>
     </div>
+    </>
   )
 }

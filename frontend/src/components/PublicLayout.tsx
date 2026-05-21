@@ -157,7 +157,9 @@ export default function PublicLayout() {
 
       {/* Main content */}
       <main className="flex-1">
-        <Outlet />
+        <Suspense fallback={<PageSkeleton />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Footer */}

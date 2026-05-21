@@ -1,9 +1,12 @@
+import { Suspense } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
+import { AdminPageSkeleton } from './PageSkeleton'
 
 const navItems = [
   { label: 'Dashboard', href: '/admin', icon: '📊' },
   { label: 'Productos', href: '/admin/productos', icon: '📦' },
   { label: 'Categorías', href: '/admin/categorias', icon: '📁' },
+  { label: 'Marcas', href: '/admin/marcas', icon: '🏷️' },
   { label: 'Imágenes y Banners', href: '/admin/imagenes', icon: '🖼️' },
   { label: 'Pedidos', href: '/admin/pedidos', icon: '📋' },
   { label: 'Clientes', href: '/admin/clientes', icon: '👥' },
@@ -79,7 +82,9 @@ export default function AdminLayout() {
         </header>
 
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          <Suspense fallback={<AdminPageSkeleton />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

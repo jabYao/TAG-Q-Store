@@ -1,92 +1,93 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import api from '@/api/client'
 
 const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 
-export default function AdminDashboard() {
-  const stats = [
-    { label: 'Ventas del mes', value: formatPrice(12500000), change: '+12%', icon: '💰' },
-    { label: 'Pedidos este mes', value: '342', change: '+8%', icon: '📦' },
-    { label: 'Clientes nuevos', value: '89', change: '+15%', icon: '👤' },
-  ]
+const statusLabels: Record<string, { label: string; color: string }> = {
+  pending: { label: 'Pendiente', color: 'bg-amber-100 text-amber-700' },
+  paid: { label: 'Pagado', color: 'bg-green-100 text-green-700' },
+  rejected: { label: 'Rechazado', color: 'bg-red-100 text-red-700' },
+  contraentrega_pending: { label: 'Pendiente contraentrega', color: 'bg-blue-100 text-blue-700' },
+  preparing: { label: 'En preparación', color: 'bg-primary/10 text-primary' },
+  shipped: { label: 'Enviado', color: 'bg-purple-100 text-purple-700' },
+  delivered: { label: 'Entregado', color: 'bg-green-100 text-green-700' },
+  cancelled: { label: 'Cancelado', color: 'bg-gray-100 text-gray-700' },
+}
 
-  const recentOrders = [
-    { id: 'TAG-241', client: 'Juan Pérez', date: '19/05', total: 320000, status: 'Pendiente', statusColor: 'text-amber-600 bg-amber-50' },
-    { id: 'TAG-240', client: 'María López', date: '19/05', total: 185000, status: 'Pagado', statusColor: 'text-green-600 bg-green-50' },
-    { id: 'TAG-239', client: 'Ana García', date: '18/05', total: 95000, status: 'Fallido', statusColor: 'text-red-600 bg-red-50' },
-    { id: 'TAG-238', client: 'Carlos Ruiz', date: '18/05', total: 450000, status: 'Contraentrega', statusColor: 'text-purple-600 bg-purple-50' },
-  ]
+export default function Dashboard() {
+  const { data: kpi, isLoading } = useQuery({
+    queryKey: ['admin', 'dashboard'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/dashboard')
+      return data.data
+    },
+  })
+
+  if (isLoading) return <div className="p-6 text-sm text-gray-400">Cargando...</div>
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-carbon mb-1">Dashboard</h1>
-      <p className="text-sm text-gray-400 mb-6">Bienvenido al panel de administración</p>
+      <h1 className="text-2xl font-bold text-carbon mb-6">Dashboard</h1>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-2xl">{s.icon}</span>
-              <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded">
-                {s.change}
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-carbon">{s.value}</p>
-            <p className="text-xs text-gray-400 mt-1">{s.label}</p>
-          </div>
-        ))}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Productos</p>
+          <p className="text-3xl font-bold text-carbon mt-1">{kpi?.total_products ?? 0}</p>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Pedidos totales</p>
+          <p className="text-3xl font-bold text-carbon mt-1">{kpi?.total_orders ?? 0}</p>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Clientes</p>
+          <p className="text-3xl font-bold text-carbon mt-1">{kpi?.total_customers ?? 0}</p>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Pendientes</p>
+          <p className="text-3xl font-bold text-carbon mt-1">{kpi?.pending_orders ?? 0}</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent orders */}
+      {/* Second row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm col-span-2">
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Ingresos este mes</p>
+          <p className="text-3xl font-bold text-carbon mt-1">{formatPrice(kpi?.revenue_this_month ?? 0)}</p>
+        </div>
         <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-carbon">Pedidos recientes</h2>
-            <Link to="/admin/pedidos" className="text-xs text-primary hover:underline">Ver todos →</Link>
-          </div>
-          <div className="space-y-2">
-            {recentOrders.map((order) => (
-              <Link
-                key={order.id}
-                to={`/admin/pedidos/${order.id}`}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
-              >
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Stock bajo</p>
+          <p className={`text-3xl font-bold mt-1 ${kpi?.low_stock_products ? 'text-red-500' : 'text-green-600'}`}>
+            {kpi?.low_stock_products ?? 0}
+          </p>
+        </div>
+      </div>
+
+      {/* Recent Orders */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-semibold text-carbon uppercase tracking-wide">Pedidos recientes</h2>
+          <Link to="/admin/pedidos" className="text-xs text-primary hover:underline">Ver todos</Link>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {kpi?.recent_orders?.length > 0 ? kpi.recent_orders.map((o: any) => {
+            const st = statusLabels[o.status] ?? { label: o.status, color: 'bg-gray-100 text-gray-700' }
+            return (
+              <Link key={o.id} to={`/admin/pedidos/${o.id}`} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors">
                 <div>
-                  <p className="text-sm font-medium text-carbon">{order.id}</p>
-                  <p className="text-xs text-gray-400">{order.client} · {order.date}</p>
+                  <p className="text-sm font-medium text-carbon">{o.order_number}</p>
+                  <p className="text-xs text-gray-400">{o.items_count} producto(s) · {new Date(o.created_at).toLocaleDateString('es-CO')}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-primary">{formatPrice(order.total)}</p>
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${order.statusColor}`}>
-                    {order.status}
-                  </span>
+                  <p className="text-sm font-bold text-carbon">{formatPrice(o.total)}</p>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st.color}`}>{st.label}</span>
                 </div>
               </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick actions */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <h2 className="text-sm font-semibold text-carbon mb-4">Acciones rápidas</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Link to="/admin/productos" className="p-4 bg-gray-50 rounded-xl text-center hover:bg-primary/5 transition-colors">
-              <span className="text-2xl block mb-1">📦</span>
-              <span className="text-xs font-medium text-carbon">Nuevo producto</span>
-            </Link>
-            <Link to="/admin/pedidos" className="p-4 bg-gray-50 rounded-xl text-center hover:bg-primary/5 transition-colors">
-              <span className="text-2xl block mb-1">📋</span>
-              <span className="text-xs font-medium text-carbon">Ver pedidos</span>
-            </Link>
-            <Link to="/admin/categorias" className="p-4 bg-gray-50 rounded-xl text-center hover:bg-primary/5 transition-colors">
-              <span className="text-2xl block mb-1">📁</span>
-              <span className="text-xs font-medium text-carbon">Categorías</span>
-            </Link>
-            <Link to="/admin/configuracion" className="p-4 bg-gray-50 rounded-xl text-center hover:bg-primary/5 transition-colors">
-              <span className="text-2xl block mb-1">⚙️</span>
-              <span className="text-xs font-medium text-carbon">Configuración</span>
-            </Link>
-          </div>
+            )
+          }) : (
+            <div className="text-center py-8 text-sm text-gray-400">Sin pedidos recientes</div>
+          )}
         </div>
       </div>
     </div>

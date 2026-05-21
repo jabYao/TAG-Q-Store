@@ -19,5 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Report critical exceptions to Sentry in production
+        $exceptions->reportable(function (Throwable $e) {
+            if (app()->environment('production') && app()->bound('sentry')) {
+                app('sentry')->captureException($e);
+            }
+        });
     })->create();

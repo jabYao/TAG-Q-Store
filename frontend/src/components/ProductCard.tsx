@@ -6,10 +6,11 @@ interface ProductCardProps {
   price: number
   originalPrice?: number
   imageUrl?: string
+  thumbnail?: string
   badge?: { label: string; variant: 'gold' | 'primary' }
 }
 
-export default function ProductCard({ name, slug, price, originalPrice, badge }: ProductCardProps) {
+export default function ProductCard({ name, slug, price, originalPrice, imageUrl, badge }: ProductCardProps) {
   const formatPrice = (amount: number) =>
     `$${amount.toLocaleString('es-CO')}`
 
@@ -20,9 +21,19 @@ export default function ProductCard({ name, slug, price, originalPrice, badge }:
     >
       {/* Image */}
       <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
-        <span className="text-5xl group-hover:scale-110 transition-transform duration-300">
-          ⌚
-        </span>
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          />
+        ) : (
+          <span className="text-5xl group-hover:scale-110 transition-transform duration-300">
+            ⌚
+          </span>
+        )}
 
         {/* Badge */}
         {badge && (

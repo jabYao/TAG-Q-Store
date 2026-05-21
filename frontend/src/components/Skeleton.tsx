@@ -114,6 +114,18 @@ export function OrderListSkeleton({ count = 5 }: { count?: number }) {
   )
 }
 
+export function CategoryCardSkeleton() {
+  return (
+    <div className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+      <Skeleton className="aspect-square rounded-none" />
+      <div className="p-4 space-y-2 text-center">
+        <Skeleton className="h-5 w-1/2 mx-auto" />
+        <Skeleton className="h-3 w-1/3 mx-auto" />
+      </div>
+    </div>
+  )
+}
+
 export function HomeSectionSkeleton() {
   return (
     <div className="space-y-6">

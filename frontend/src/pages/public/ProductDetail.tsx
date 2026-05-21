@@ -1,61 +1,11 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { fetchProduct, fetchProducts, addToCart } from '@/api'
 import ProductCard from '@/components/ProductCard'
+import SEO from '@/components/SEO'
 import { DetailSkeleton } from '@/components/Skeleton'
 import { toast } from '@/stores/toastStore'
-
-// Mock product data
-const mockProduct = {
-  slug: 'tommy-chronograph',
-  brand: 'Tommy Hilfiger',
-  name: 'Tommy Hilfiger Chronograph Analógico de Cuarzo',
-  price: 250000,
-  originalPrice: 350000,
-
-  description: `Reloj con movimiento de cuarzo suizo y caja de acero inoxidable 316L. Esfera azul con detalles cronográficos y fecha a las 3 horas. Resistente al agua hasta 5 ATM.
-
-  Diseño clásico y sofisticado ideal para cualquier ocasión. Pulso de acero inoxidable con cierre desplegable seguro.`,
-  details: [
-    { label: 'Marca', value: 'Tommy Hilfiger' },
-    { label: 'Modelo / Referencia', value: 'TH-CHR-001' },
-    { label: 'Género / Unisex', value: 'Masculino' },
-    { label: 'Estilo', value: 'Elegante' },
-    { label: 'SKU', value: 'TH-CHR-001' },
-    { label: 'Garantía', value: '2 años' },
-    { label: 'Origen', value: 'Importado' },
-  ],
-  specs: [
-    { label: 'Tipo de reloj', value: 'Analógico' },
-    { label: 'Movimiento', value: 'Cuarzo suizo' },
-    { label: 'Material de la caja', value: 'Acero inoxidable 316L' },
-    { label: 'Tamaño de la caja', value: '42 mm' },
-    { label: 'Grosor', value: '11 mm' },
-    { label: 'Forma de la caja', value: 'Redonda' },
-    { label: 'Color de la caja', value: 'Plateado' },
-    { label: 'Cristal', value: 'Mineral resistente a rayones' },
-    { label: 'Tipo de esfera / Dial', value: 'Analógico con cronógrafo' },
-    { label: 'Color de esfera', value: 'Azul' },
-    { label: 'Correa / Brazalete', value: 'Brazalete' },
-    { label: 'Material de la correa', value: 'Acero inoxidable' },
-    { label: 'Color de correa', value: 'Plateado' },
-    { label: 'Tipo de cierre', value: 'Desplegable con seguro' },
-    { label: 'Resistencia al agua', value: '5 ATM (50m)' },
-    { label: 'Funciones', value: 'Cronógrafo, Fecha, GMT' },
-  ],
-  shipping: 'Envío gratis a todo Colombia por compras superiores a $400.000. Tiempo de entrega: 3-5 días hábiles. Devoluciones gratis dentro de los 30 días posteriores a la compra. El producto debe estar sin uso y en su empaque original.',
-  colors: ['Negro', 'Plateado', 'Azul'],
-  sizes: ['36mm', '38mm', '42mm'],
-  images: ['⌚', '⌚', '⌚', '⌚'],
-}
-
-const relatedProducts = [
-  { name: 'Tommy Hilfiger Classic', slug: 'tommy-classic', price: 145000, originalPrice: undefined, badge: undefined },
-  { name: 'Casio G-Shock Digital', slug: 'casio-gshock', price: 180000, originalPrice: 220000, badge: { label: '-18%', variant: 'gold' as const } },
-  { name: 'Titan Edge Automatic', slug: 'titan-edge', price: 320000, originalPrice: undefined, badge: undefined },
-  { name: 'Guess Ultra Thin', slug: 'guess-ultra', price: 195000, originalPrice: undefined, badge: { label: 'NUEVO', variant: 'primary' as const } },
-]
-
-const tabs = ['Descripción', 'Detalles', 'Especificaciones Técnicas', 'Envíos y devoluciones']
 
 function QuantitySelector({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
@@ -80,34 +30,99 @@ function QuantitySelector({ value, onChange }: { value: number; onChange: (v: nu
 }
 
 export default function ProductDetail() {
-  const [loading, setLoading] = useState(true)
+  const { slug } = useParams<{ slug: string }>()
+  const navigate = useNavigate()
   const [selectedImage, setSelectedImage] = useState(0)
-
-  useEffect(() => {
-    setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 700)
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
-        <DetailSkeleton />
-      </div>
-    )
-  }
-  const [selectedColor, setSelectedColor] = useState(mockProduct.colors[0])
-  const [selectedSize, setSelectedSize] = useState(mockProduct.sizes[1])
+  const [selectedColor, setSelectedColor] = useState('')
+  const [selectedSize, setSelectedSize] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState(0)
 
+  const { data: product, isLoading, isError } = useQuery({
+    queryKey: ['product', slug],
+    queryFn: () => fetchProduct(slug!),
+    enabled: !!slug,
+  })
+
+  const { data: relatedData } = useQuery({
+    queryKey: ['products', 'related', product?.category?.slug],
+    queryFn: () => fetchProducts({ category: product!.category!.slug, per_page: 4, sort: 'recent' }),
+    enabled: !!product?.category?.slug,
+  })
+
   const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
-  const discount = mockProduct.originalPrice
-    ? Math.round(((mockProduct.originalPrice - mockProduct.price) / mockProduct.originalPrice) * 100)
+
+  if (isLoading) {
+    return (
+      <>
+        <SEO title="Cargando..." />
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+          <DetailSkeleton />
+        </div>
+      </>
+    )
+  }
+
+  if (isError || !product) {
+    return (
+      <>
+        <SEO title="Producto no encontrado" noIndex />
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-16 text-center">
+        <span className="text-5xl">🔍</span>
+        <h2 className="text-xl font-semibold text-carbon mt-4">Producto no encontrado</h2>
+        <p className="text-sm text-gray-400 mt-2">El producto que buscás no existe o fue eliminado.</p>
+        <Link to="/catalogo" className="inline-block mt-6 text-primary hover:underline text-sm">Volver al catálogo</Link>
+      </div>
+    </>
+    )
+  }
+
+  const discount = product.original_price
+    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0
 
+  const images = product.images?.length
+    ? product.images
+    : [{ url: null, alt_text: null, is_primary: true, sort_order: 0, type: 'product', id: 0 }]
+
+  const specsEntries = product.specs ? Object.entries(product.specs) : []
+
+  const details = [
+    ...(product.brand ? [{ label: 'Marca', value: product.brand.name }] : []),
+    { label: 'SKU', value: product.sku },
+    ...(product.gender ? [{ label: 'Género', value: product.gender === 'male' ? 'Masculino' : product.gender === 'female' ? 'Femenino' : 'Unisex' }] : []),
+    ...(product.movement ? [{ label: 'Movimiento', value: product.movement }] : []),
+    ...(product.specs?.garantia ? [{ label: 'Garantía', value: product.specs.garantia }] : []),
+    ...(product.specs?.origen ? [{ label: 'Origen', value: product.specs.origen }] : []),
+  ]
+
+  const addToCartMutation = useMutation({
+    mutationFn: () => addToCart(product.id, quantity),
+    onSuccess: () => {
+      toast.success(`${product.name} agregado al carrito`)
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Error al agregar al carrito')
+    },
+  })
+
+  const handleBuyNow = () => {
+    addToCartMutation.mutate(undefined, {
+      onSuccess: () => navigate('/checkout'),
+    })
+  }
+
   return (
-    <div>
+    <>
+      <SEO
+        title={product.name}
+        description={product.short_description || product.description?.slice(0, 160)}
+        image={product.primary_image || undefined}
+        url={`/producto/${product.slug}`}
+        type="product"
+        publishedAt={product.published_at}
+      />
+      <div>
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 lg:px-6 pt-4 pb-2">
         <nav className="text-xs text-gray-400">
@@ -115,7 +130,7 @@ export default function ProductDetail() {
           <span className="mx-1">/</span>
           <Link to="/catalogo" className="hover:text-primary">Catálogo</Link>
           <span className="mx-1">/</span>
-          <span className="text-carbon">{mockProduct.name}</span>
+          <span className="text-carbon">{product.name}</span>
         </nav>
       </div>
 
@@ -124,189 +139,194 @@ export default function ProductDetail() {
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
           {/* Gallery */}
           <div className="w-full lg:w-[55%]">
-            {/* Main image */}
-            <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl flex items-center justify-center border border-gray-100 mb-4">
-              <span className="text-8xl md:text-9xl">{mockProduct.images[selectedImage]}</span>
+            <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl flex items-center justify-center border border-gray-100 mb-4 overflow-hidden">
+              {images[selectedImage]?.url ? (
+                <img
+                  src={images[selectedImage].url}
+                  alt={images[selectedImage].alt_text ?? product.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-8xl md:text-9xl">⌚</span>
+              )}
             </div>
 
-            {/* Thumbnails */}
-            <div className="flex gap-3">
-              {mockProduct.images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  className={`w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 flex items-center justify-center bg-gray-50 transition-all ${
-                    i === selectedImage
-                      ? 'border-primary'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="text-2xl">{img}</span>
-                </button>
-              ))}
-            </div>
+            {images.length > 1 && (
+              <div className="flex gap-3">
+                {images.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedImage(i)}
+                    className={`w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 flex items-center justify-center bg-gray-50 overflow-hidden transition-all ${
+                      i === selectedImage
+                        ? 'border-primary'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {img.url ? (
+                      <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-2xl">⌚</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Info */}
           <div className="w-full lg:w-[45%]">
-            {/* Brand */}
-            <p className="text-xs text-primary font-semibold uppercase tracking-widest mb-1">
-              {mockProduct.brand}
-            </p>
+            {product.brand && (
+              <p className="text-xs text-primary font-semibold uppercase tracking-widest mb-1">
+                {product.brand.name}
+              </p>
+            )}
 
-            {/* Name */}
             <h1 className="text-2xl md:text-3xl font-bold text-carbon leading-tight mb-3">
-              {mockProduct.name}
+              {product.name}
             </h1>
 
+            {/* Rating placeholder */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex text-gold text-sm">★★★★★</div>
+              <span className="text-xs text-gray-400">(0 reseñas)</span>
+            </div>
+
             {/* Price */}
-            <div className="flex items-baseline gap-3 mb-4">
-              <span className="text-3xl font-bold text-primary">
-                {formatPrice(mockProduct.price)}
-              </span>
-              {mockProduct.originalPrice && (
+            <div className="flex items-baseline gap-3 mb-6">
+              <span className="text-3xl font-bold text-carbon">{formatPrice(product.price)}</span>
+              {product.original_price && (
                 <>
-                  <span className="text-lg text-gray-400 line-through">
-                    {formatPrice(mockProduct.originalPrice)}
-                  </span>
-                  <span className="bg-gold text-carbon text-xs font-bold px-2 py-0.5 rounded">
-                    -{discount}%
-                  </span>
+                  <span className="text-lg text-gray-400 line-through">{formatPrice(product.original_price)}</span>
+                  <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">-{discount}%</span>
                 </>
               )}
             </div>
 
-            {/* Free shipping badge */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              <span className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-medium">
-                🚚 Envío gratis desde $400.000
-              </span>
-              <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium">
-                🔄 30 días de cambio gratis
-              </span>
-            </div>
-
-            {/* Color */}
-            <div className="mb-4">
-              <label className="text-sm font-medium text-carbon block mb-2">Color</label>
-              <div className="flex gap-2">
-                {mockProduct.colors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setSelectedColor(color)}
-                    className={`px-4 py-2 text-sm rounded-lg border transition-all ${
-                      selectedColor === color
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-gray-200 text-carbon hover:border-gray-300'
-                    }`}
-                  >
-                    {color}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Size */}
+            {/* Stock indicator */}
             <div className="mb-6">
-              <label className="text-sm font-medium text-carbon block mb-2">Tamaño</label>
-              <div className="flex gap-2">
-                {mockProduct.sizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`px-4 py-2 text-sm rounded-lg border transition-all ${
-                      selectedSize === size
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-gray-200 text-carbon hover:border-gray-300'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
+              {product.is_out_of_stock ? (
+                <p className="text-sm text-red-500 font-medium">⛔ Agotado</p>
+              ) : product.stock <= 5 ? (
+                <p className="text-sm text-amber-600 font-medium">⚠️ Solo quedan {product.stock} unidades</p>
+              ) : (
+                <p className="text-sm text-green-600 font-medium">✅ En stock</p>
+              )}
             </div>
+
+            {/* Short description */}
+            {product.short_description && (
+              <p className="text-sm text-gray-500 leading-relaxed mb-6">{product.short_description}</p>
+            )}
+
+            {/* Colors */}
+            {product.specs?.color_esfera && (
+              <div className="mb-5">
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Color: <span className="font-medium text-carbon">{selectedColor || product.specs.color_esfera}</span></p>
+                <div className="flex gap-2">
+                  {[product.specs.color_esfera, product.specs.correa_color].filter(Boolean).map((color, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedColor(color!)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        selectedColor === color || (!selectedColor && i === 0)
+                          ? 'border-primary scale-110'
+                          : 'border-gray-200'
+                      }`}
+                      style={{ backgroundColor: color === 'Plateado' ? '#C0C0C0' : color === 'Azul' ? '#0B2977' : color === 'Negro' ? '#1A1A1A' : color === 'Blanco' ? '#FFFFFF' : color === 'Dorado' ? '#D4AF37' : color === 'Marrón' ? '#6B3A2A' : '#999' }}
+                      title={color!}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Size selector */}
+            {product.specs?.tamano_caja && (
+              <div className="mb-6">
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Tamaño: <span className="font-medium text-carbon">{selectedSize || product.specs.tamano_caja}</span></p>
+                <div className="flex gap-2 flex-wrap">
+                  {['36mm', '38mm', '40mm', '42mm'].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`px-3 py-1.5 text-xs rounded-lg border transition-all ${
+                        selectedSize === size
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quantity + Add to cart */}
-            <div className="space-y-3 mb-6">
-              <label className="text-sm font-medium text-carbon block">Cantidad</label>
+            <div className="flex items-center gap-4 mb-6">
               <QuantitySelector value={quantity} onChange={setQuantity} />
-            </div>
-
-            <div className="space-y-3">
               <button
-                onClick={() => toast.success('Agregado al carrito', `${mockProduct.name} · ${formatPrice(mockProduct.price * quantity)}`)}
-                className="w-full bg-primary text-white py-3.5 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-all duration-200 flex items-center justify-center gap-2"
+                onClick={() => addToCartMutation.mutate()}
+                disabled={product.is_out_of_stock || addToCartMutation.isPending}
+                className="flex-1 bg-primary text-white px-6 py-3 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                🛒 AGREGAR AL CARRITO — {formatPrice(mockProduct.price * quantity)}
-              </button>
-              <button className="w-full bg-gold text-carbon py-3.5 rounded-lg font-semibold text-sm hover:bg-[#e0c456] transition-all duration-200">
-                COMPRAR AHORA →
+                {addToCartMutation.isPending ? 'AGREGANDO...' : product.is_out_of_stock ? 'AGOTADO' : 'AGREGAR AL CARRITO'}
               </button>
             </div>
 
-            {/* Trust */}
-            <div className="mt-6 pt-6 border-t border-gray-100 space-y-2">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="text-base">🚚</span> Envío gratis +$400.000
-              </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="text-base">🔄</span> 30 días de cambio gratis
-              </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="text-base">💳</span> Pago seguro con Wompi
-              </div>
+            {/* Buy now */}
+            {!product.is_out_of_stock && (
+              <button
+                onClick={handleBuyNow}
+                className="w-full border-2 border-primary text-primary px-6 py-3 rounded-lg font-semibold text-sm hover:bg-primary hover:text-white transition-all duration-200 mb-6"
+              >
+                COMPRAR AHORA
+              </button>
+            )}
+
+            {/* Shipping info */}
+            <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500 space-y-2">
+              <p>🚚 Envío gratis a todo Colombia por compras superiores a $400.000</p>
+              <p>↩️ Devoluciones gratis dentro de los 30 días posteriores a la compra</p>
             </div>
           </div>
         </div>
 
-        {/* Tabs section */}
-        <div className="mt-12 lg:mt-16">
-          {/* Tab headers */}
-          <div className="border-b border-gray-200">
-            <div className="flex gap-0">
-              {tabs.map((tab, i) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(i)}
-                  className={`px-5 md:px-8 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === i
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-gray-400 hover:text-carbon'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+        {/* Tabs */}
+        <div className="mt-12">
+          <div className="flex gap-0 border-b border-gray-200">
+            {['Descripción', 'Detalles', 'Especificaciones Técnicas', 'Envíos y devoluciones'].map((tab, i) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(i)}
+                className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium transition-all border-b-2 -mb-[1px] ${
+                  activeTab === i
+                    ? 'text-primary border-primary'
+                    : 'text-gray-400 border-transparent hover:text-gray-600'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
-          {/* Tab content */}
-          <div className="py-6 md:py-8">
+          <div className="py-8">
             {activeTab === 0 && (
               <div className="max-w-3xl">
-                {/* Brand logo */}
-                <div className="flex items-center gap-3 mb-6">
-                  <span className="text-4xl">👔</span>
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wider">Marca</p>
-                    <p className="text-lg font-semibold text-carbon">Tommy Hilfiger</p>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-600 leading-relaxed space-y-4">
-                  {mockProduct.description.split('\n\n').map((p, i) => (
-                    <p key={i}>{p.trim()}</p>
-                  ))}
-                </div>
+                <p className="text-sm text-gray-500 leading-relaxed whitespace-pre-line">
+                  {product.description || 'Sin descripción disponible.'}
+                </p>
               </div>
             )}
 
             {activeTab === 1 && (
               <div className="max-w-xl">
                 <table className="w-full text-sm">
-                  <tbody>
-                    {mockProduct.details.map((d) => (
-                      <tr key={d.label} className="border-b border-gray-100">
-                        <td className="py-3 pr-8 text-gray-400 font-medium w-2/5">{d.label}</td>
+                  <tbody className="divide-y divide-gray-100">
+                    {details.map((d, i) => (
+                      <tr key={i}>
+                        <td className="py-3 pr-8 text-gray-400 font-medium w-40">{d.label}</td>
                         <td className="py-3 text-carbon">{d.value}</td>
                       </tr>
                     ))}
@@ -317,15 +337,14 @@ export default function ProductDetail() {
 
             {activeTab === 2 && (
               <div className="max-w-xl">
-                <h4 className="text-sm font-semibold text-carbon mb-4 uppercase tracking-wide">
-                  Ficha técnica
-                </h4>
                 <table className="w-full text-sm">
-                  <tbody>
-                    {mockProduct.specs.map((s) => (
-                      <tr key={s.label} className="border-b border-gray-100">
-                        <td className="py-3 pr-8 text-gray-400 font-medium w-2/5">{s.label}</td>
-                        <td className="py-3 text-carbon">{s.value}</td>
+                  <tbody className="divide-y divide-gray-100">
+                    {specsEntries.map(([key, value], i) => (
+                      <tr key={i}>
+                        <td className="py-3 pr-8 text-gray-400 font-medium w-40 capitalize">
+                          {key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                        </td>
+                        <td className="py-3 text-carbon">{String(value)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -334,28 +353,45 @@ export default function ProductDetail() {
             )}
 
             {activeTab === 3 && (
-              <div className="max-w-3xl text-sm text-gray-600 leading-relaxed">
-                <p>{mockProduct.shipping}</p>
+              <div className="max-w-2xl text-sm text-gray-500 leading-relaxed space-y-4">
+                <p><strong className="text-carbon">Envío gratis</strong> a todo Colombia por compras superiores a $400.000 COP.</p>
+                <p>Tiempo de entrega estimado: <strong className="text-carbon">3-5 días hábiles</strong> en principales ciudades.</p>
+                <p>
+                  <strong className="text-carbon">Devoluciones gratis</strong> dentro de los 30 días posteriores a la compra.
+                  El producto debe estar sin uso y en su empaque original.
+                </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Related products */}
-        <div className="mt-8 pt-8 border-t border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-semibold text-carbon">Relacionados</h2>
-            <Link to="/catalogo" className="text-sm text-primary hover:underline">
-              Ver todos →
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            {relatedProducts.map((p) => (
-              <ProductCard key={p.slug} {...p} />
-            ))}
-          </div>
-        </div>
+        {/* Related Products */}
+        {relatedData && relatedData.data.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-2xl font-semibold text-carbon mb-6">Productos Relacionados</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {relatedData.data.filter(p => p.slug !== product.slug).slice(0, 4).map((p) => (
+                <ProductCard
+                  key={p.slug}
+                  name={p.name}
+                  slug={p.slug}
+                  price={p.price}
+                  originalPrice={p.original_price ?? undefined}
+                  imageUrl={p.primary_image ?? undefined}
+                  badge={
+                    p.discount_percent && p.discount_percent >= 10
+                      ? { label: `-${p.discount_percent}%`, variant: 'gold' as const }
+                      : p.is_new
+                        ? { label: 'NUEVO', variant: 'primary' as const }
+                        : undefined
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
+    </>
   )
 }

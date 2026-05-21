@@ -1,193 +1,178 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-
-interface Address {
-  id: number
-  label: string
-  name: string
-  street: string
-  city: string
-  region: string
-  phone: string
-  default: boolean
-}
-
-const initialAddresses: Address[] = [
-  { id: 1, label: 'Casa', name: 'Juan Pérez', street: 'Calle 123 #45-67', city: 'Bogotá', region: 'Cundinamarca', phone: '+57 300 000 0000', default: true },
-  { id: 2, label: 'Oficina', name: 'Juan Pérez', street: 'Cra 98 #76-54, Apto 302', city: 'Medellín', region: 'Antioquia', phone: '+57 310 000 0000', default: false },
-]
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchAddresses, createAddress, updateAddress, deleteAddress } from '@/api'
+import type { AddressFormData } from '@/api'
+import { toast } from '@/stores/toastStore'
 
 export default function Addresses() {
-  const [addresses, setAddresses] = useState(initialAddresses)
-  const [showForm, setShowForm] = useState(false)
+  const queryClient = useQueryClient()
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [form, setForm] = useState({ label: '', name: '', street: '', city: '', region: '', phone: '' })
+  const [isCreating, setIsCreating] = useState(false)
+  const [form, setForm] = useState<AddressFormData>({
+    name: '',
+    phone: '',
+    address_line: '',
+    city: '',
+    department: '',
+    zip: '',
+    reference: '',
+    is_default: false,
+  })
 
-  const openNew = () => {
-    setEditingId(null)
-    setForm({ label: '', name: '', street: '', city: '', region: '', phone: '' })
-    setShowForm(true)
-  }
+  const { data: addresses } = useQuery({
+    queryKey: ['addresses'],
+    queryFn: fetchAddresses,
+  })
 
-  const openEdit = (addr: Address) => {
-    setEditingId(addr.id)
-    setForm({ label: addr.label, name: addr.name, street: addr.street, city: addr.city, region: addr.region, phone: addr.phone })
-    setShowForm(true)
-  }
+  const createMutation = useMutation({
+    mutationFn: createAddress,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['addresses'] })
+      setIsCreating(false); resetForm()
+      toast.success('Dirección creada')
+    },
+    onError: () => toast.error('Error al crear dirección'),
+  })
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (editingId) {
-      setAddresses((prev) => prev.map((a) => (a.id === editingId ? { ...a, ...form } : a)))
-    } else {
-      setAddresses((prev) => [...prev, { id: Date.now(), ...form, default: prev.length === 0 }])
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: AddressFormData }) => updateAddress(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['addresses'] })
+      setEditingId(null); resetForm()
+      toast.success('Dirección actualizada')
+    },
+    onError: () => toast.error('Error al actualizar'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteAddress,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['addresses'] })
+      toast.success('Dirección eliminada')
+    },
+    onError: () => toast.error('Error al eliminar'),
+  })
+
+  const resetForm = () => setForm({ name: '', phone: '', address_line: '', city: '', department: '', zip: '', reference: '', is_default: false })
+
+  const handleSave = (id?: number) => {
+    if (!form.name.trim() || !form.address_line.trim() || !form.city.trim() || !form.department.trim()) {
+      toast.error('Completá los campos obligatorios'); return
     }
-    setShowForm(false)
-    setEditingId(null)
+    if (id) updateMutation.mutate({ id, data: form })
+    else createMutation.mutate(form)
   }
 
-  const handleDelete = (id: number) => {
-    setAddresses((prev) => prev.filter((a) => a.id !== id))
-  }
-
-  const handleSetDefault = (id: number) => {
-    setAddresses((prev) => prev.map((a) => ({ ...a, default: a.id === id })))
+  const startEdit = (addr: any) => {
+    setEditingId(addr.id)
+    setForm({
+      name: addr.name, phone: addr.phone, address_line: addr.address_line,
+      city: addr.city, department: addr.department, zip: addr.zip ?? '',
+      reference: addr.reference ?? '', is_default: addr.is_default,
+    })
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 lg:px-6 py-6">
-      {/* Breadcrumb */}
-      <nav className="text-xs text-gray-400 mb-6">
-        <Link to="/" className="hover:text-primary">Home</Link>
-        <span className="mx-1">/</span>
-        <Link to="/perfil" className="hover:text-primary">Mi Cuenta</Link>
-        <span className="mx-1">/</span>
-        <span className="text-carbon">Direcciones</span>
-      </nav>
+    <div className="max-w-3xl mx-auto px-4 lg:px-6 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold text-carbon">Mis Direcciones</h1>
+        {!isCreating && (
+          <button onClick={() => { setIsCreating(true); resetForm() }}
+            className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark">
+            + Nueva Dirección
+          </button>
+        )}
+      </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Sidebar */}
-        <aside className="w-full md:w-56 shrink-0">
-          <div className="md:sticky md:top-6 space-y-1">
-            <Link to="/perfil" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
-              <span>👤</span> Perfil
-            </Link>
-            <Link to="/mis-pedidos" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
-              <span>📦</span> Mis Pedidos
-            </Link>
-            <Link to="/direcciones" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-primary text-white transition-colors">
-              <span>📍</span> Direcciones
-            </Link>
-            <hr className="my-3 border-gray-100" />
-            <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-400 hover:bg-gray-100 transition-colors w-full text-left">
-              <span>🚪</span> Cerrar sesión
-            </button>
+      {/* Form */}
+      {(isCreating || editingId !== null) && (
+        <div className="bg-white p-6 rounded-xl border-2 border-primary shadow-sm mb-6 space-y-4">
+          <h3 className="text-sm font-semibold text-carbon">{editingId ? 'Editar dirección' : 'Nueva dirección'}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Nombre completo *</label>
+              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Teléfono *</label>
+              <input type="text" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs text-gray-400 block mb-1">Dirección *</label>
+              <input type="text" value={form.address_line} onChange={e => setForm(f => ({ ...f, address_line: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Ciudad *</label>
+              <input type="text" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Departamento *</label>
+              <input type="text" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Código postal</label>
+              <input type="text" value={form.zip ?? ''} onChange={e => setForm(f => ({ ...f, zip: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Punto de referencia</label>
+              <input type="text" value={form.reference ?? ''} onChange={e => setForm(f => ({ ...f, reference: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Ej: Cerca al parque" />
+            </div>
           </div>
-        </aside>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-xl md:text-2xl font-semibold text-carbon">Mis Direcciones</h1>
-            <button onClick={openNew} className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors">
-              + Agregar nueva
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={form.is_default ?? false}
+              onChange={e => setForm(f => ({ ...f, is_default: e.target.checked }))}
+              className="rounded border-gray-300 text-primary focus:ring-primary" />
+            <span className="text-sm text-carbon">Dirección predeterminada</span>
+          </label>
+          <div className="flex gap-2">
+            <button onClick={() => handleSave(editingId ?? undefined)}
+              className="bg-primary text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark">
+              {editingId ? 'Actualizar' : 'Guardar'}
             </button>
+            <button onClick={() => { setEditingId(null); setIsCreating(false); resetForm() }}
+              className="px-6 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
           </div>
-
-          {addresses.length === 0 && !showForm ? (
-            <div className="text-center py-12">
-              <span className="text-4xl">📍</span>
-              <p className="text-sm text-gray-400 mt-3 mb-4">No tenés direcciones guardadas</p>
-              <button onClick={openNew} className="text-sm text-primary hover:underline">+ Agregá tu primera dirección</button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {addresses.map((addr) => (
-                <div key={addr.id} className="bg-white border border-gray-100 rounded-xl shadow-sm p-5 relative">
-                  {addr.default && (
-                    <span className="absolute top-3 right-3 text-[10px] bg-gold text-carbon px-1.5 py-0.5 rounded font-medium">
-                      PREDETERMINADA
-                    </span>
-                  )}
-                  <h3 className="text-sm font-semibold text-carbon mb-2">{addr.label}</h3>
-                  <div className="text-sm text-gray-500 space-y-0.5 mb-4">
-                    <p>{addr.name}</p>
-                    <p>{addr.street}</p>
-                    <p>{addr.city}, {addr.region}</p>
-                    <p>{addr.phone}</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <button onClick={() => openEdit(addr)} className="text-primary hover:underline">Editar</button>
-                    {!addr.default && (
-                      <button onClick={() => handleDelete(addr.id)} className="text-red-500 hover:underline">Eliminar</button>
-                    )}
-                    {!addr.default && (
-                      <button onClick={() => handleSetDefault(addr.id)} className="text-gray-400 hover:text-carbon">Establecer como principal</button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {/* Add card */}
-              <button onClick={openNew} className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex items-center justify-center gap-2 text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors h-full min-h-[160px]">
-                <span className="text-xl">+</span>
-                <span className="text-sm font-medium">Agregar nueva dirección</span>
-              </button>
-            </div>
-          )}
-
-          {/* Form modal */}
-          {showForm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="fixed inset-0 bg-black/30" onClick={() => setShowForm(false)} />
-              <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-carbon">
-                    {editingId ? 'Editar dirección' : 'Agregar dirección'}
-                  </h2>
-                  <button onClick={() => setShowForm(false)} className="text-2xl text-gray-400">&times;</button>
-                </div>
-
-                <form onSubmit={handleSave} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="text-xs text-gray-400 block mb-1">Nombre de la dirección</label>
-                      <input type="text" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="Ej: Casa, Oficina" required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-xs text-gray-400 block mb-1">Nombre y apellido</label>
-                      <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-xs text-gray-400 block mb-1">Dirección</label>
-                      <input type="text" value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} placeholder="Calle, Carrera, #" required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-400 block mb-1">Ciudad</label>
-                      <input type="text" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-400 block mb-1">Departamento</label>
-                      <input type="text" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-xs text-gray-400 block mb-1">Teléfono</label>
-                      <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                  </div>
-                  <div className="flex gap-3 pt-2">
-                    <button type="submit" className="bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors">
-                      {editingId ? 'Guardar cambios' : 'Agregar dirección'}
-                    </button>
-                    <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 rounded-lg text-sm text-gray-400 hover:text-carbon border border-gray-200 transition-colors">
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
         </div>
+      )}
+
+      {/* Address list */}
+      <div className="space-y-3">
+        {addresses?.map((addr) => (
+          <div key={addr.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <span className="text-lg">📍</span>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-carbon">{addr.name}</h3>
+                {addr.is_default && <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Predeterminada</span>}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">{addr.address_line}</p>
+              <p className="text-xs text-gray-500">{addr.city}, {addr.department}</p>
+              <p className="text-xs text-gray-400 mt-0.5">📞 {addr.phone}</p>
+              {addr.reference && <p className="text-[10px] text-gray-300 mt-0.5">📍 {addr.reference}</p>}
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => startEdit(addr)}
+                className="text-xs text-primary hover:underline">Editar</button>
+              <button onClick={() => { if (window.confirm('¿Eliminar dirección?')) deleteMutation.mutate(addr.id) }}
+                className="text-xs text-red-500 hover:underline">Eliminar</button>
+            </div>
+          </div>
+        ))}
+        {(!addresses || addresses.length === 0) && !isCreating && (
+          <div className="text-center py-12">
+            <span className="text-4xl">📍</span>
+            <p className="text-sm text-gray-400 mt-3">No tenés direcciones guardadas</p>
+          </div>
+        )}
       </div>
     </div>
   )

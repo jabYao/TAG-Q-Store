@@ -19,5 +19,13 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             AdminUserSeeder::class,
         ]);
+
+        // Fase 5 — Catálogo
+        $this->call([
+            BrandSeeder::class,
+            CategorySeeder::class,
+            ProductSeeder::class,
+            SettingSeeder::class,
+        ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -11,10 +12,12 @@ class ProductImageResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'url' => $this->url,
-            'cloudinary_id' => $this->cloudinary_id,
-            'is_primary' => (bool) $this->is_primary,
-            'sort_order' => (int) $this->sort_order,
+            'url' => CloudinaryService::optimizeUrl($this->cloudinary_url, 800),
+            'thumbnail' => CloudinaryService::optimizeUrl($this->cloudinary_url, 300, 300),
+            'alt_text' => $this->alt_text,
+            'sort_order' => $this->sort_order,
+            'is_primary' => $this->is_primary,
+            'type' => $this->type,
         ];
     }
 }

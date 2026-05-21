@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import SEO from '@/components/SEO'
 
 export default function Contact() {
   const [name, setName] = useState('')
@@ -24,7 +25,9 @@ export default function Contact() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+    <>
+      <SEO title="Contacto" description="Contactanos por WhatsApp, email o formulario. Estamos para ayudarte." url="/contacto" />
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
       {/* Breadcrumb */}
       <nav className="text-xs text-gray-400 mb-6">
         <Link to="/" className="hover:text-primary">Home</Link>
@@ -141,5 +144,6 @@ export default function Contact() {
         </div>
       </div>
     </div>
+    </>
   )
 }

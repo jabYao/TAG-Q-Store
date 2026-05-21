@@ -58,6 +58,13 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        // Canal para logs críticos en producción (Sentry + archivo)
+        'critical' => [
+            'driver' => 'stack',
+            'channels' => ['single', 'sentry'],
+            'ignore_exceptions' => false,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
@@ -125,6 +132,13 @@ return [
 
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
+        ],
+
+        // Sentry (producción) — se agrega al stack en producción
+        'sentry' => [
+            'driver' => 'sentry',
+            'level' => env('SENTRY_LOG_LEVEL', 'error'),
+            'bootstrap' => \Sentry\Laravel\LogChannel::class,
         ],
 
     ],

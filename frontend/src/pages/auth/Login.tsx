@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import SEO from '@/components/SEO'
 
 type FieldErrors = {
   email?: string
@@ -39,7 +40,9 @@ export default function Login() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 py-16">
+    <>
+      <SEO title="Iniciar Sesión" description="Iniciá sesión en tu cuenta TAG-Q para gestionar tus pedidos y direcciones." url="/login" />
+      <div className="max-w-md mx-auto px-4 py-16">
       <h1 className="text-2xl font-bold text-center text-carbon mb-8">Iniciar Sesión</h1>
 
       {(error || fieldErrors.email) && (
@@ -111,5 +114,6 @@ export default function Login() {
         </p>
       </form>
     </div>
+    </>
   )
 }

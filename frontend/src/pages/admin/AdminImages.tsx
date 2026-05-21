@@ -1,178 +1,206 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import api from '@/api/client'
+import { uploadBannerImage } from '@/api/images'
+import { toast } from '@/stores/toastStore'
 
-interface Banner {
+interface BannerData {
   id: number
-  name: string
-  image: string | null
-  active: boolean
-  position: string
+  title: string | null
+  subtitle: string | null
+  cta_text: string | null
+  cta_link: string | null
+  image_url: string | null
+  type: string
+  is_active: boolean
+  sort_order: number
+  bg_color: string | null
 }
 
 export default function AdminImages() {
+  const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [view, setView] = useState<'banners' | 'gallery'>('banners')
-  const [banners, setBanners] = useState<Banner[]>([
-    { id: 1, name: 'Hero Principal (Home)', image: '🖼️', active: true, position: 'hero' },
-    { id: 2, name: 'Banner Secundario (Home)', image: null, active: false, position: 'secondary' },
-    { id: 3, name: 'Banner Colecciones', image: null, active: false, position: 'collections' },
-  ])
-  const [gallery, setGallery] = useState<string[]>(Array(8).fill('🖼️'))
-  const [dragging, setDragging] = useState(false)
+  const [uploadingBannerId, setUploadingBannerId] = useState<number | null>(null)
 
-  const handleBannerUpload = (id: number) => {
-    setBanners((prev) => prev.map((b) => b.id === id ? { ...b, image: '🖼️', active: true } : b))
+  const { data: banners } = useQuery({
+    queryKey: ['banners'],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: BannerData[] }>('/admin/banners')
+      return data.data
+    },
+  })
+
+  const { data: galleryImages } = useQuery({
+    queryKey: ['product-images', 'gallery'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/imagenes')
+      return data.data ?? []
+    },
+    enabled: false,
+  })
+
+  const uploadMutation = useMutation({
+    mutationFn: async ({ bannerId, file }: { bannerId: number; file: File }) => {
+      const result = await uploadBannerImage(file)
+      await api.put(`/admin/banners/${bannerId}`, { image_url: result.url, is_active: true })
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['banners'] })
+      toast.success('Banner actualizado')
+    },
+    onError: () => toast.error('Error al subir banner'),
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: async (bannerId: number) => {
+      await api.put(`/admin/banners/${bannerId}`, { image_url: null, is_active: false })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['banners'] })
+    },
+  })
+
+  const createBannerMutation = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post('/admin/banners', {
+        title: 'Nuevo banner',
+        cta_text: 'VER MÁS →',
+        cta_link: '/catalogo',
+        type: 'promo',
+        is_active: false,
+      })
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['banners'] })
+      toast.success('Banner creado')
+    },
+  })
+
+  const deleteBannerMutation = useMutation({
+    mutationFn: async (bannerId: number) => {
+      await api.delete(`/admin/banners/${bannerId}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['banners'] })
+      toast.success('Banner eliminado')
+    },
+  })
+
+  const [editTitle, setEditTitle] = useState<Record<number, string>>({})
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !uploadingBannerId) return
+    uploadMutation.mutate({ bannerId: uploadingBannerId, file })
+    setUploadingBannerId(null)
+    e.target.value = ''
   }
 
-  const handleBannerRemove = (id: number) => {
-    setBanners((prev) => prev.map((b) => b.id === id ? { ...b, image: null, active: false } : b))
-  }
-
-  const handleGalleryAdd = () => {
-    setGallery((prev) => [...prev, '🖼️'])
-  }
-
-  const handleGalleryRemove = (i: number) => {
-    setGallery((prev) => prev.filter((_, idx) => idx !== i))
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length) return
+    toast.success(`${files.length} archivo(s) seleccionado(s). Usá la sección de productos para asignarlos.`)
+    e.target.value = ''
   }
 
   return (
     <div className="p-6 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-carbon">Imágenes y Banners</h1>
+        {view === 'banners' && (
+          <button onClick={() => createBannerMutation.mutate()}
+            className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors">
+            + Nuevo Banner
+          </button>
+        )}
         {view === 'gallery' && (
-          <button onClick={handleGalleryAdd} className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors">
+          <button onClick={() => fileInputRef.current?.click()}
+            className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors">
             + Subir imágenes
           </button>
         )}
       </div>
 
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={view === 'banners' ? handleFileSelect : handleGalleryUpload} />
+
       {/* Tabs */}
       <div className="flex gap-0 border-b border-gray-200 mb-6">
-        <button
-          onClick={() => setView('banners')}
-          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${view === 'banners' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-carbon'}`}
-        >
-          Banners
-        </button>
-        <button
-          onClick={() => setView('gallery')}
-          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${view === 'gallery' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-carbon'}`}
-        >
-          Galería
-        </button>
+        <button onClick={() => setView('banners')}
+          className={`px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-[1px] ${
+            view === 'banners' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600'
+          }`}>Banners</button>
+        <button onClick={() => setView('gallery')}
+          className={`px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-[1px] ${
+            view === 'gallery' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600'
+          }`}>Galería de imágenes</button>
       </div>
 
-      {/* Banners */}
-      {view === 'banners' && (
+      {view === 'banners' ? (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs text-gray-400">💡 Los banners se muestran en el Home según su posición.</span>
-          </div>
-
-          {banners.map((banner) => (
-            <div key={banner.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="flex flex-col md:flex-row">
-                {/* Image preview */}
-                <div
-                  onClick={() => !banner.image && handleBannerUpload(banner.id)}
-                  className={`w-full md:w-56 h-32 md:h-40 flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
-                    banner.image
-                      ? 'bg-gray-100'
-                      : 'bg-gray-50 border-2 border-dashed border-gray-200 hover:border-gray-300 m-3 rounded-xl'
-                  }`}
-                >
-                  {banner.image ? (
-                    <div className="relative w-full h-full flex items-center justify-center">
-                      <span className="text-5xl">{banner.image}</span>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <span className="text-2xl text-gray-300">📸</span>
-                      <p className="text-xs text-gray-400 mt-1">Click para subir</p>
-                      <p className="text-[10px] text-gray-300">1920x520px · WebP</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-sm font-semibold text-carbon">{banner.name}</h3>
-                      <p className="text-[10px] text-gray-400 mt-0.5">Posición: {banner.position}</p>
-                    </div>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${banner.active ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                      {banner.active ? 'Activo' : 'Sin imagen'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-4">
-                    {banner.image ? (
-                      <>
-                        <button onClick={() => handleBannerUpload(banner.id)} className="text-xs text-primary hover:underline">Reemplazar</button>
-                        <button onClick={() => handleBannerRemove(banner.id)} className="text-xs text-red-500 hover:underline">Eliminar</button>
-                      </>
-                    ) : (
-                      <button onClick={() => handleBannerUpload(banner.id)} className="text-xs text-primary hover:underline">Subir imagen</button>
-                    )}
-                    <label className="flex items-center gap-1.5 text-xs text-gray-400 ml-auto cursor-pointer">
-                      <input type="checkbox" checked={banner.active} onChange={() => setBanners((prev) => prev.map((b) => b.id === banner.id ? { ...b, active: !b.active } : b))} className="accent-primary w-3 h-3" />
-                      Mostrar en home
-                    </label>
-                  </div>
-                </div>
+          {banners?.map((banner) => (
+            <div key={banner.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-6">
+              <div className="w-48 h-32 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden shrink-0"
+                style={banner.bg_color ? { backgroundColor: banner.bg_color } : undefined}>
+                {banner.image_url ? (
+                  <img src={banner.image_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-gray-300 text-sm">Sin imagen</span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <input type="text" value={editTitle[banner.id] ?? banner.title ?? ''}
+                  onChange={e => setEditTitle(t => ({ ...t, [banner.id]: e.target.value }))}
+                  onBlur={async () => {
+                    const title = editTitle[banner.id]
+                    if (title !== undefined && title !== banner.title) {
+                      await api.put(`/admin/banners/${banner.id}`, { title })
+                      queryClient.invalidateQueries({ queryKey: ['banners'] })
+                    }
+                  }}
+                  className="text-sm font-semibold text-carbon bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none w-full" />
+                <p className="text-xs text-gray-400 mt-0.5">Tipo: {banner.type}</p>
+                <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                  banner.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                }`}>{banner.is_active ? 'Activo' : 'Inactivo'}</span>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => { setUploadingBannerId(banner.id); fileInputRef.current?.click() }}
+                  className="px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                  {banner.image_url ? 'Cambiar' : 'Subir'}
+                </button>
+                {banner.image_url && (
+                  <button onClick={() => removeMutation.mutate(banner.id)}
+                    className="px-3 py-1.5 text-xs text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                    Quitar
+                  </button>
+                )}
+                <button onClick={() => { if (window.confirm('¿Eliminar banner?')) deleteBannerMutation.mutate(banner.id) }}
+                  className="px-3 py-1.5 text-xs text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                  Eliminar
+                </button>
               </div>
             </div>
           ))}
-
-          {/* Add new banner */}
-          <button className="w-full border-2 border-dashed border-gray-200 rounded-xl py-4 text-sm text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors flex items-center justify-center gap-2">
-            <span>+</span> Agregar nuevo banner
-          </button>
-        </div>
-      )}
-
-      {/* Gallery */}
-      {view === 'gallery' && (
-        <>
-          {/* Upload zone */}
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); handleGalleryAdd() }}
-            className={`border-2 border-dashed rounded-xl py-8 flex flex-col items-center justify-center mb-6 transition-colors cursor-pointer ${dragging ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 bg-gray-50'}`}
-          >
-            <span className="text-3xl text-gray-300 mb-2">📸</span>
-            <p className="text-sm text-gray-400 font-medium">Arrastrá imágenes aquí</p>
-            <p className="text-xs text-gray-300 mt-1">o hace click para seleccionar archivos</p>
-            <p className="text-[10px] text-gray-300 mt-2">JPG, PNG, WebP · Máx 5MB cada una</p>
-          </div>
-
-          {/* Grid */}
-          {gallery.length === 0 ? (
-            <div className="text-center py-12">
-              <span className="text-4xl">🖼️</span>
-              <p className="text-sm text-gray-400 mt-3">No hay imágenes en la galería</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {gallery.map((img, i) => (
-                <div key={i} className="group relative aspect-square bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all">
-                  <span className="text-4xl">{img}</span>
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                    <button onClick={() => handleGalleryRemove(i)} className="w-7 h-7 bg-red-500 text-white rounded-full text-sm opacity-0 group-hover:opacity-100 transition-all hover:scale-110">✕</button>
-                  </div>
-                  <span className="absolute bottom-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    Eliminar
-                  </span>
-                </div>
-              ))}
-              <button onClick={handleGalleryAdd} className="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-300 hover:border-gray-400 hover:text-gray-400 transition-colors">
-                <span className="text-2xl">+</span>
-                <span className="text-[10px] mt-1">Agregar</span>
-              </button>
-            </div>
+          {(!banners || banners.length === 0) && (
+            <div className="text-center py-12 text-sm text-gray-400">No hay banners. Creá el primero.</div>
           )}
-        </>
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <span className="text-5xl">🖼️</span>
+          <h3 className="text-lg font-semibold text-carbon mt-4">Gestión de imágenes de producto</h3>
+          <p className="text-sm text-gray-400 mt-1 max-w-md mx-auto">
+            Las imágenes de producto se gestionan desde el formulario de cada producto en la sección Productos.
+          </p>
+          <a href="/admin/productos" className="mt-4 inline-block bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors">
+            Ir a Productos
+          </a>
+        </div>
       )}
     </div>
   )

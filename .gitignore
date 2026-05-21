@@ -38,3 +38,7 @@ Thumbs.db
 # Local Pi runtime state
 .atl/
 .pi/
+nul
+
+# Test artifacts
+/frontend/test-results/
