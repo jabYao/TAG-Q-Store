@@ -96,15 +96,17 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function show(string $slug): JsonResponse
     {
-        $product = Cache::remember("product.slug.{$slug}", 300, function () use ($slug) {
-            return Product::active()->published()
+        $data = Cache::remember("product.slug.{$slug}", 300, function () use ($slug) {
+            $product = Product::active()->published()
                 ->with(['brand', 'category', 'images' => fn($q) => $q->ordered()])
                 ->where('slug', $slug)
                 ->firstOrFail();
+
+            return ProductResource::make($product)->toArray(request());
         });
 
         return response()->json([
-            'data' => ProductResource::make($product),
+            'data' => $data,
         ]);
     }
 

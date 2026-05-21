@@ -26,22 +26,24 @@ class BrandController extends Controller implements HasMiddleware
     public function index(Request $request): JsonResponse
     {
         $brands = Cache::remember('brands.all', 3600, function () {
-            return Brand::where('is_active', true)
+            $collection = Brand::where('is_active', true)
                 ->withCount('products')
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get();
+
+            return BrandResource::collection($collection)->toArray(request());
         });
 
-        // Aplicar búsqueda en memoria (opcional, pocos resultados)
-        $collection = $brands;
+        // Cachea array transformado; filtramos en memoria si hace falta
+        $data = $brands;
         if ($request->filled('search')) {
             $search = strtolower($request->search);
-            $collection = $brands->filter(fn($b) => str_contains(strtolower($b->name), $search))->values();
+            $data = array_values(array_filter($brands, fn($b) => str_contains(strtolower($b['name']), $search)));
         }
 
         return response()->json([
-            'data' => BrandResource::collection($collection),
+            'data' => $data,
         ]);
     }
 

@@ -27,7 +27,7 @@ class CategoryController extends Controller implements HasMiddleware
     {
         $key = $request->boolean('parents_only') ? 'categories.parents' : 'categories.all';
 
-        $categories = Cache::remember($key, 3600, function () use ($request) {
+        $data = Cache::remember($key, 3600, function () use ($request) {
             $query = Category::where('is_active', true)
                 ->withCount('products');
 
@@ -35,11 +35,13 @@ class CategoryController extends Controller implements HasMiddleware
                 $query->whereNull('parent_id');
             }
 
-            return $query->orderBy('sort_order')->orderBy('name')->get();
+            return CategoryResource::collection(
+                $query->orderBy('sort_order')->orderBy('name')->get()
+            )->toArray(request());
         });
 
         return response()->json([
-            'data' => CategoryResource::collection($categories),
+            'data' => $data,
         ]);
     }
 

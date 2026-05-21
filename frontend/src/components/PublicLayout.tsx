@@ -1,7 +1,9 @@
+import { Suspense } from 'react'
 import { Outlet, Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
+import { PageSkeleton } from '@/components/PageSkeleton'
 import { toast } from '@/stores/toastStore'
 
 const navLinks = [

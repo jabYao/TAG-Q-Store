@@ -20,7 +20,10 @@ class CartTest extends TestCase
     {
         parent::setUp();
         $this->user = User::factory()->create();
-        $this->product = Product::factory()->create(['is_active' => true]);
+        $this->product = Product::factory()->create([
+            'is_active' => true,
+            'stock' => 10,
+        ]);
     }
 
     public function test_guest_cannot_access_cart(): void

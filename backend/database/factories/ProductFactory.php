@@ -23,7 +23,7 @@ class ProductFactory extends Factory
             'price' => fake()->randomFloat(2, 100000, 10000000),
             'original_price' => null,
             'sku' => strtoupper(fake()->bothify('SKU-####-????')),
-            'stock' => fake()->numberBetween(0, 100),
+            'stock' => fake()->numberBetween(5, 100),
             'min_stock' => fake()->numberBetween(1, 10),
             'gender' => fake()->randomElement(['male', 'female', 'unisex']),
             'movement' => fake()->randomElement(['automatic', 'quartz', 'mechanical', 'solar']),
