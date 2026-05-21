@@ -98,11 +98,11 @@ class ProductController extends Controller implements HasMiddleware
     {
         $data = Cache::remember("product.slug.{$slug}", 300, function () use ($slug) {
             $product = Product::active()->published()
-                ->with(['brand', 'category', 'primaryImage', 'images' => fn($q) => $q->ordered()])
+                ->with(['brand', 'category', 'images' => fn($q) => $q->ordered()])
                 ->where('slug', $slug)
                 ->firstOrFail();
 
-            return ProductResource::make($product)->resolve(request());
+            return ProductResource::make($product)->toArray(request());
         });
 
         return response()->json([

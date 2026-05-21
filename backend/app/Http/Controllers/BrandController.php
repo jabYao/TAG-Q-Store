@@ -32,7 +32,7 @@ class BrandController extends Controller implements HasMiddleware
                 ->orderBy('name')
                 ->get();
 
-            return BrandResource::collection($collection)->resolve(request());
+            return BrandResource::collection($collection)->toArray(request());
         });
 
         // Cachea array transformado; filtramos en memoria si hace falta
