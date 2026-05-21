@@ -37,7 +37,7 @@ class CategoryController extends Controller implements HasMiddleware
 
             return CategoryResource::collection(
                 $query->orderBy('sort_order')->orderBy('name')->get()
-            )->toArray(request());
+            )->resolve(request());
         });
 
         return response()->json([
