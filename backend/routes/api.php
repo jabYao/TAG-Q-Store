@@ -32,6 +32,40 @@ Route::get('/categorias', [CategoryController::class, 'index']);
 Route::get('/categorias/{slug}', [CategoryController::class, 'show']);
 Route::get('/marcas', [BrandController::class, 'index']);
 
+// ─── Banners públicos ───
+Route::get('/banners', function () {
+    return response()->json([
+        'data' => \App\Models\Banner::active()
+            ->orderBy('sort_order')
+            ->get(['title', 'subtitle', 'cta_text', 'cta_link', 'image_url', 'bg_color'])
+    ]);
+});
+
+// ─── Heroes públicos ───
+Route::get('/heroes', function () {
+    return response()->json([
+        'data' => \App\Models\Hero::active()
+            ->get(['title', 'subtitle', 'cta_text', 'cta_link', 'image_url'])
+    ]);
+});
+
+// ─── Settings públicos ───
+Route::get('/settings/contacto', function () {
+    return response()->json([
+        'whatsapp' => \App\Models\Setting::getValue('whatsapp_contacto', '573152429172'),
+        'envio_minimo' => \App\Models\Setting::getValue('envio_gratis_minimo', 400000),
+    ]);
+});
+
+Route::get('/settings/top-bar', function () {
+    $messages = \App\Models\Setting::getValue('top_bar_messages', []);
+    $envioMinimo = \App\Models\Setting::getValue('envio_gratis_minimo', 400000);
+    return response()->json([
+        'messages' => $messages,
+        'envio_minimo' => $envioMinimo,
+    ]);
+});
+
 // ─── Guest auth routes (throttled) ───
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:3,1');
@@ -70,8 +104,13 @@ Route::middleware('auth:sanctum')->group(function () {
         if ($order->user_id !== $request->user()->id) {
             return response()->json(['message' => 'No autorizado.'], 403);
         }
+        $order->load('items.product', 'address', 'statuses');
+
+        $whatsapp = \App\Models\Setting::getValue('whatsapp_contacto', '573152429172');
+
         return response()->json([
-            'data' => $order->load('items.product', 'address', 'statuses')
+            'data' => $order,
+            'whatsapp' => $whatsapp,
         ]);
     });
 });

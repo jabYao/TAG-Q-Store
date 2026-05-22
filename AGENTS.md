@@ -78,11 +78,13 @@
 - [x] Redis configurado en .env (sin servidor en Windows — usa sync/file para dev)
 
 ### Fase 3 — Design system y componentes base ✅
-- [x] Componentes base: botones, inputs, cards, badges, skeletons, toasts
-- [x] Layout: PublicLayout, AdminLayout, Header, Footer
-- [x] Grid de producto con ProductCard reutilizable
-- [x] HeroBanner, CategoryCard, PageSkeleton, ErrorBoundary
-- [x] SEO component con metadatos y Open Graph
+- [x] `docs/04-design-system.md` — documento completo con tokens, componentes, ejemplos
+- [x] `<Button>` — componente con variantes primary/gold/outline/ghost, sizes sm/md/lg, loading spinner
+- [x] `<Input>` / `<Textarea>` — componente con label, error, helperText, estados focus/error/disabled
+- [x] `<Modal>` — diálogo modal con backdrop, Escape, animación, footer actions
+- [x] `<Footer>` — componente independiente extraído de PublicLayout
+- [x] Layout: PublicLayout, AdminLayout, ProductCard, CategoryCard, HeroBanner, PromoBanner
+- [x] Skeletons (8 variantes), Toast (4 tipos), ErrorBoundary, SEO
 
 ### Fase 4 — Autenticación, roles y seguridad ✅
 - [x] Login/logout, registro, recuperación de contraseña
@@ -157,7 +159,7 @@
 | Sitemap / Arquitectura | `/docs/01-sitemap.md` | ✅ Completado | ~45 rutas detalladas |
 | Matriz de Roles | `/docs/02-roles-permisos.md` | ✅ Incluido en doc maestro | Sección 8 del documento maestro |
 | Entidades y Relaciones | `/docs/03-entidades.md` | ✅ Incluido en doc maestro | Sección 7 del documento maestro |
-| Design System | `/docs/04-design-system.md` | ✅ Completado | Componentes base y layouts |
+| Design System | `/docs/04-design-system.md` | ✅ Completado | Tokens, Button, Input, Modal, Footer, layouts, animaciones |
 | Wireframes | `/docs/05-wireframes.md` | ✅ Completado | Home y Catálogo (avance) |
 | Mockups | `/docs/06-mockups.md` | ✅ Completado | Diseño final con colores y tipografías |
 | Skills | `/docs/07-skills.md` | ✅ Completado | 8 skills registradas |

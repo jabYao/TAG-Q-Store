@@ -19,6 +19,7 @@ export default function AdminHeroes() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [uploadingFor, setUploadingFor] = useState<number | null>(null)
+  const [uploadingHeroId, setUploadingHeroId] = useState<number | null>(null)
 
   const { data: heroes, isLoading } = useQuery({
     queryKey: ['heroes'],
@@ -83,14 +84,27 @@ export default function AdminHeroes() {
   })
 
   const handleImageUpload = async (heroId: number, file: File) => {
-    const formData = new FormData()
-    formData.append('image', file)
-    const { data } = await api.post('/admin/imagenes/banner', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    await api.put(`/admin/heroes/${heroId}`, { image_url: data.data.url })
-    queryClient.invalidateQueries({ queryKey: ['heroes'] })
-    toast.success('Imagen subida')
+    setUploadingHeroId(heroId)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+
+      const { data } = await api.post('/admin/imagenes/banner', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30000,
+      })
+
+      await api.put(`/admin/heroes/${heroId}`, { image_url: data.data.url })
+
+      queryClient.invalidateQueries({ queryKey: ['heroes'] })
+      toast.success('✅ Imagen subida correctamente')
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Error al subir la imagen'
+      toast.error('❌ ' + msg)
+    } finally {
+      setUploadingHeroId(null)
+      setUploadingFor(null)
+    }
   }
 
   const startEdit = (hero: HeroData) => {
@@ -122,7 +136,9 @@ export default function AdminHeroes() {
       <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
         onChange={async (e) => {
           const file = e.target.files?.[0]
-          if (file && uploadingFor) { await handleImageUpload(uploadingFor, file); setUploadingFor(null) }
+          if (file && uploadingFor) {
+            await handleImageUpload(uploadingFor, file)
+          }
           e.target.value = ''
         }} />
 
@@ -179,9 +195,22 @@ export default function AdminHeroes() {
               </button>
             </div>
             <div className="flex flex-col gap-2 shrink-0">
-              <button onClick={() => { setUploadingFor(hero.id); fileInputRef.current?.click() }}
-                className="px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary-dark">
-                {hero.image_url ? 'Cambiar img' : 'Subir img'}
+              <button
+                onClick={() => { if (!uploadingHeroId) { setUploadingFor(hero.id); fileInputRef.current?.click() } }}
+                disabled={uploadingHeroId === hero.id}
+                className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
+                  uploadingHeroId === hero.id
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-primary text-white hover:bg-primary-dark'
+                }`}>
+                {uploadingHeroId === hero.id ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    Subiendo...
+                  </span>
+                ) : (
+                  hero.image_url ? 'Cambiar img' : 'Subir img'
+                )}
               </button>
               <button onClick={() => startEdit(hero)}
                 className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">

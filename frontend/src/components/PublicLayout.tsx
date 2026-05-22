@@ -1,10 +1,12 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Outlet, Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { PageSkeleton } from '@/components/PageSkeleton'
-import { toast } from '@/stores/toastStore'
+import Footer from '@/components/Footer'
+import { fetchTopBarSettings } from '@/api'
+import type { TopBarMessage } from '@/api/settings'
 
 const navLinks = [
   { label: 'Home', href: '/' },
@@ -22,6 +24,35 @@ export default function PublicLayout() {
   const cartCount = useCartStore((s) => s.count)
   const { user, authenticated, logout } = useAuthStore()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [topBarMessages, setTopBarMessages] = useState<TopBarMessage[]>([
+    { icon: '🚚', text: 'ENVÍO GRATIS EN PEDIDOS SOBRE $400.000' },
+    { icon: '💳', text: 'PAGO SEGURO' },
+    { icon: '📞', text: '24/7 SOPORTE' },
+  ])
+  const [currentMessage, setCurrentMessage] = useState(0)
+
+  // Fetch top bar settings
+  useEffect(() => {
+    fetchTopBarSettings()
+      .then((settings) => {
+        if (settings.messages?.length > 0) {
+          setTopBarMessages(settings.messages)
+        }
+      })
+      .catch(() => {
+        // Keep defaults
+      })
+  }, [])
+
+  // Cycle messages every 4 seconds
+  useEffect(() => {
+    if (topBarMessages.length <= 1) return
+    const interval = setInterval(() => {
+      setCurrentMessage((prev) => (prev + 1) % topBarMessages.length)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [topBarMessages.length])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,11 +63,22 @@ export default function PublicLayout() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Top bar */}
-      <div className="bg-primary text-white text-xs text-center py-1.5 px-4 flex items-center justify-center gap-4">
-        <span>🚚 ENVÍO GRATIS EN PEDIDOS SOBRE $400.000</span>
-        <span className="hidden md:inline">💳 PAGO SEGURO</span>
-        <span className="hidden md:inline">📞 24/7 SOPORTE</span>
+      {/* Top bar — carrusel de mensajes */}
+      <div className="bg-primary text-white text-xs text-center py-1.5 px-4 overflow-hidden">
+        <div className="max-w-7xl mx-auto relative h-5">
+          {topBarMessages.map((msg, i) => (
+            <span
+              key={i}
+              className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${
+                i === currentMessage
+                  ? 'opacity-100 translate-y-0'
+                  : 'opacity-0 translate-y-2'
+              }`}
+            >
+              {msg.icon} {msg.text}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Header */}
@@ -45,8 +87,12 @@ export default function PublicLayout() {
           {/* Row 1: Search + Logo + Icons */}
           <div className="flex items-center justify-between h-[72px]">
             {/* Mobile menu toggle */}
-            <button className="md:hidden text-carbon p-2" aria-label="Menú">
-              ☰
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="md:hidden text-carbon p-2 hover:text-primary transition-colors"
+              aria-label="Menú"
+            >
+              {showMobileMenu ? '✕' : '☰'}
             </button>
 
             {/* Search (desktop) */}
@@ -157,6 +203,152 @@ export default function PublicLayout() {
         </nav>
       </header>
 
+      {/* Mobile drawer overlay */}
+      {showMobileMenu && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setShowMobileMenu(false)}
+          />
+
+          {/* Drawer */}
+          <div className="fixed top-0 left-0 bottom-0 w-[280px] bg-white z-50 md:hidden shadow-2xl animate-slide-in">
+            <div className="flex flex-col h-full">
+              {/* Drawer header */}
+              <div className="flex items-center justify-between px-4 h-[72px] border-b border-gray-200">
+                <Link
+                  to="/"
+                  onClick={() => setShowMobileMenu(false)}
+                  className="text-[28px] font-bold text-primary tracking-tight"
+                >
+                  TAG-Q
+                </Link>
+                <button
+                  onClick={() => setShowMobileMenu(false)}
+                  className="text-carbon p-2 hover:text-primary transition-colors"
+                  aria-label="Cerrar menú"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Drawer search */}
+              <div className="px-4 pt-4 pb-2">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (searchQuery.trim()) {
+                      navigate(`/busqueda?q=${encodeURIComponent(searchQuery.trim())}`)
+                      setShowMobileMenu(false)
+                    }
+                  }}
+                  className="relative"
+                >
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscá tu reloj ideal..."
+                    className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-carbon placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-colors"
+                  />
+                </form>
+              </div>
+
+              {/* Drawer nav */}
+              <nav className="flex-1 overflow-y-auto px-4 py-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2 px-3">
+                  Navegación
+                </p>
+                <ul className="space-y-0.5">
+                  {navLinks.map((link) => (
+                    <li key={link.href}>
+                      <Link
+                        to={link.href}
+                        onClick={() => setShowMobileMenu(false)}
+                        className="block px-3 py-2.5 text-sm text-carbon hover:text-primary hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+
+                {authenticated && user?.roles.includes('admin') && (
+                  <>
+                    <hr className="my-4 border-gray-100" />
+                    <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2 px-3">
+                      Admin
+                    </p>
+                    <Link
+                      to="/admin"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="flex items-center gap-2 px-3 py-2.5 text-sm text-primary hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                    >
+                      📊 Panel Admin
+                    </Link>
+                  </>
+                )}
+              </nav>
+
+              {/* Drawer footer */}
+              <div className="border-t border-gray-200 px-4 py-4">
+                {authenticated && user ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <span className="text-lg">👤</span>
+                      <span className="text-sm font-medium text-carbon truncate">{user.name}</span>
+                    </div>
+                    <Link
+                      to="/perfil"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="block px-3 py-2 text-sm text-carbon hover:text-primary hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      Mi Perfil
+                    </Link>
+                    <Link
+                      to="/mis-pedidos"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="block px-3 py-2 text-sm text-carbon hover:text-primary hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      Mis Pedidos
+                    </Link>
+                    <button
+                      onClick={async () => {
+                        setShowMobileMenu(false)
+                        await logout()
+                        navigate('/')
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      Cerrar Sesión
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Link
+                      to="/login"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="block w-full text-center bg-primary text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors"
+                    >
+                      Iniciar Sesión
+                    </Link>
+                    <Link
+                      to="/registro"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="block w-full text-center border border-primary text-primary px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
+                    >
+                      Registrarse
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Main content */}
       <main className="flex-1">
         <Suspense fallback={<PageSkeleton />}>
@@ -165,72 +357,7 @@ export default function PublicLayout() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-primary text-white">
-        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Brand */}
-            <div>
-              <h3 className="text-2xl font-bold mb-2">TAG-Q</h3>
-              <p className="text-gold text-xs mb-4">Relojería premium colombiana</p>
-              <p className="text-gray-400 text-xs">© 2026 TAG-Q. Todos los derechos reservados.</p>
-            </div>
-
-            {/* Shop */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3">COMPRÁ</h4>
-              <ul className="space-y-2 text-xs text-gray-400">
-                <li><Link to="/catalogo" className="hover:text-gold transition-colors">Catálogo</Link></li>
-                <li><Link to="/categoria/dama" className="hover:text-gold transition-colors">Dama</Link></li>
-                <li><Link to="/categoria/caballero" className="hover:text-gold transition-colors">Caballero</Link></li>
-                <li><Link to="/categoria/branded" className="hover:text-gold transition-colors">Branded</Link></li>
-              </ul>
-            </div>
-
-            {/* Help */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3">AYUDA</h4>
-              <ul className="space-y-2 text-xs text-gray-400">
-                <li><Link to="/faq" className="hover:text-gold transition-colors">FAQ</Link></li>
-                <li><Link to="/politicas" className="hover:text-gold transition-colors">Políticas de envío</Link></li>
-                <li><Link to="/contacto" className="hover:text-gold transition-colors">Contacto</Link></li>
-              </ul>
-            </div>
-
-            {/* Newsletter */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3">NEWSLETTER</h4>
-              <p className="text-xs text-gray-400 mb-3">
-                Suscribite para recibir novedades y ofertas exclusivas.
-              </p>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  toast.success('¡Gracias por suscribirte!', 'Vas a recibir nuestras novedades y ofertas.')
-                }}
-                className="flex flex-col gap-2"
-              >
-                <input
-                  type="email"
-                  required
-                  placeholder="tu@email.com"
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-colors"
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-gold text-carbon px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e0c456] transition-colors"
-                >
-                  SUSCRIBIRME
-                </button>
-              </form>
-              <div className="flex gap-3 text-lg mt-4">
-                <span className="cursor-pointer hover:text-gold transition-colors">📸</span>
-                <span className="cursor-pointer hover:text-gold transition-colors">💙</span>
-                <span className="cursor-pointer hover:text-gold transition-colors">🎵</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

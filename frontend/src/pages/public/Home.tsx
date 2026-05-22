@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchProducts, fetchCategories, fetchBrands } from '@/api'
-import HeroBanner from '@/components/HeroBanner'
+import { fetchProducts, fetchCategories, fetchBrands, fetchHeroes, fetchBanners } from '@/api'
+import type { HeroData } from '@/api/banners'
+import HeroCarousel from '@/components/HeroCarousel'
 import CategoryCard from '@/components/CategoryCard'
 import ProductCard from '@/components/ProductCard'
 import PromoBanner from '@/components/PromoBanner'
 import SEO from '@/components/SEO'
-import { ProductGridSkeleton, CategoryCardSkeleton } from '@/components/Skeleton'
+import { HeroSkeleton, ProductGridSkeleton, CategoryCardSkeleton } from '@/components/Skeleton'
 
 function toProductCard(p: { name: string; slug: string; price: number; original_price: number | null; primary_image: string | null; thumbnail: string | null; is_featured: boolean; is_new: boolean; discount_percent: number | null }) {
   const badge = p.discount_percent && p.discount_percent >= 10
@@ -43,7 +44,26 @@ const brandNames = [
   { name: 'FOSSIL', color: 'text-carbon' },
 ]
 
+const FALLBACK_HERO = {
+  title: "Timex Men Leather Straps Analogue Watch",
+  subtitle: "Descubrí la colección premium de relojería con diseño clásico y movimientos suizos. Elegancia que trasciende el tiempo.",
+  cta: "SHOP NOW →",
+  ctaLink: "/catalogo",
+}
+
 export default function Home() {
+  const { data: heroes, isLoading: heroLoading } = useQuery({
+    queryKey: ['heroes', 'home'],
+    queryFn: fetchHeroes,
+  })
+
+  const { data: promoBanners } = useQuery({
+    queryKey: ['banners', 'promo'],
+    queryFn: fetchBanners,
+  })
+
+  const activeBanner = promoBanners?.find((b: any) => b.cta_text) || promoBanners?.[0]
+
   const { data: categories, isLoading: catLoading } = useQuery({
     queryKey: ['categories', 'home'],
     queryFn: () => fetchCategories({ parents_only: true }),
@@ -69,13 +89,25 @@ export default function Home() {
         url="/"
       />
       <div>
-      {/* Hero */}
-      <HeroBanner
-        title="Timex Men Leather Straps Analogue Watch"
-        subtitle="Descubrí la colección premium de relojería con diseño clásico y movimientos suizos. Elegancia que trasciende el tiempo."
-        cta="SHOP NOW →"
-        ctaLink="/catalogo"
-      />
+      {/* Hero Carousel */}
+      {heroLoading ? (
+        <HeroSkeleton />
+      ) : (
+        <HeroCarousel
+          slides={
+            heroes?.length
+              ? heroes.map((h: HeroData) => ({
+                  title: h.title,
+                  subtitle: h.subtitle,
+                  cta: h.cta_text || FALLBACK_HERO.cta,
+                  ctaLink: h.cta_link || FALLBACK_HERO.ctaLink,
+                  imageUrl: h.image_url || undefined,
+                }))
+              : [FALLBACK_HERO]
+          }
+          interval={5000}
+        />
+      )}
 
       {/* Categories */}
       <section className="max-w-7xl mx-auto px-4 lg:px-6 py-12 md:py-16">
@@ -141,11 +173,12 @@ export default function Home() {
 
       {/* Promo Banner */}
       <PromoBanner
-        title="🔥 Hasta 40% OFF en relojes seleccionados"
-        subtitle="Aprovechá nuestra colección de temporada con descuentos exclusivos. Válido hasta agotar stock."
-        cta="QUIERO MI DESCUENTO →"
-        ctaLink="/catalogo?promo=40off"
-        bgColor="bg-carbon"
+        title={activeBanner?.title || '🔥 Hasta 40% OFF en relojes seleccionados'}
+        subtitle={activeBanner?.subtitle || 'Aprovechá nuestra colección de temporada con descuentos exclusivos. Válido hasta agotar stock.'}
+        cta={activeBanner?.cta_text || 'QUIERO MI DESCUENTO →'}
+        ctaLink={activeBanner?.cta_link || '/catalogo?promo=40off'}
+        imageUrl={activeBanner?.image_url || undefined}
+        bgColor={activeBanner?.bg_color || 'bg-carbon'}
         accentColor="text-gold"
       />
 

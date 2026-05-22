@@ -164,6 +164,9 @@ class CheckoutController extends Controller
             'amount_in_cents' => $total,
         ]);
 
+        // WhatsApp contacto para contraentrega
+        $whatsapp = \App\Models\Setting::getValue('whatsapp_contacto', '573152429172');
+
         // If Wompi payment, generate redirect URL via WompiService
         $paymentUrl = null;
         if ($validated['payment_method'] === 'wompi') {
@@ -185,6 +188,7 @@ class CheckoutController extends Controller
                     'payment_method' => $order->payment_method,
                 ],
                 'payment_url' => $paymentUrl,
+                'whatsapp' => $whatsapp,
             ],
             'message' => 'Orden creada correctamente.',
         ], 201);

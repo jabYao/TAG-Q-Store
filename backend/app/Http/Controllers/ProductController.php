@@ -135,12 +135,23 @@ class ProductController extends Controller implements HasMiddleware
             'specs' => 'nullable|array',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
+            'primary_image' => 'nullable|string|max:500',
         ]);
 
         $product = Product::create($validated);
 
+        // Crear imagen principal si se envió una URL
+        if (!empty($validated['primary_image'])) {
+            $product->images()->create([
+                'cloudinary_url' => $validated['primary_image'],
+                'is_primary' => true,
+                'sort_order' => 0,
+                'type' => 'gallery',
+            ]);
+        }
+
         return response()->json([
-            'data' => ProductResource::make($product->load(['brand', 'category'])),
+            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage'])),
         ], 201);
     }
 
@@ -169,14 +180,30 @@ class ProductController extends Controller implements HasMiddleware
             'specs' => 'nullable|array',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
+            'primary_image' => 'nullable|string|max:500',
         ]);
 
         $product->update($validated);
 
+        // Actualizar o crear imagen principal
+        if (!empty($validated['primary_image'])) {
+            $existing = $product->primaryImage;
+            if ($existing) {
+                $existing->update(['cloudinary_url' => $validated['primary_image']]);
+            } else {
+                $product->images()->create([
+                    'cloudinary_url' => $validated['primary_image'],
+                    'is_primary' => true,
+                    'sort_order' => 0,
+                    'type' => 'gallery',
+                ]);
+            }
+        }
+
         Cache::forget("product.slug.{$product->slug}");
 
         return response()->json([
-            'data' => ProductResource::make($product->load(['brand', 'category'])),
+            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage'])),
         ]);
     }
 

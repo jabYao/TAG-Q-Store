@@ -42,6 +42,7 @@ export interface OrderResult {
     payment_method: string
   }
   payment_url: string | null
+  whatsapp?: string
 }
 
 export async function placeOrder(input: PlaceOrderInput): Promise<OrderResult> {

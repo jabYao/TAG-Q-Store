@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import api from '@/api/client'
 import { fetchProduct, createProduct, updateProduct, fetchBrands, fetchCategories } from '@/api'
 import type { ProductFormData, BrandData, CategoryData } from '@/api'
 import { toast } from '@/stores/toastStore'
@@ -45,9 +46,31 @@ export default function AdminProductForm() {
     is_new: false,
     specs: {},
   })
-  const [specsText, setSpecsText] = useState('{}')
+  const defaultSpecFields = [
+    'estilo', 'grosor', 'origen', 'cristal', 'garantia', 'funciones',
+    'color_caja', 'forma_caja', 'tipo_reloj', 'tamano_caja', 'tipo_cierre',
+    'tipo_esfera', 'color_esfera', 'correa_color', 'material_caja',
+    'correa_material', 'resistencia_agua', 'modelo_referencia',
+  ]
+
+  const [specEntries, setSpecEntries] = useState<{ key: string; value: string }[]>([])
+
+  const specsToEntries = (specs: Record<string, any> | null): { key: string; value: string }[] =>
+    specs ? Object.entries(specs).map(([key, value]) => ({ key, value: String(value) })) : []
+
+  const entriesToSpecs = (entries: { key: string; value: string }[]): Record<string, string> => {
+    const obj: Record<string, string> = {}
+    entries.forEach(e => { if (e.key.trim()) obj[e.key.trim()] = e.value })
+    return obj
+  }
+
+  const addSpec = () => setSpecEntries(prev => [...prev, { key: '', value: '' }])
+  const removeSpec = (i: number) => setSpecEntries(prev => prev.filter((_, idx) => idx !== i))
+  const loadDefaultSpecs = () => setSpecEntries(defaultSpecFields.map(k => ({ key: k, value: '' })))
   const [mainImage, setMainImage] = useState<string | null>(null)
   const [gallery, setGallery] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingMainImage, setUploadingMainImage] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -70,7 +93,7 @@ export default function AdminProductForm() {
         is_new: product.is_new,
         specs: product.specs ?? {},
       })
-      setSpecsText(JSON.stringify(product.specs ?? {}, null, 2))
+      setSpecEntries(specsToEntries(product.specs))
       if (product.primary_image) {
         setMainImage(product.primary_image)
       }
@@ -84,12 +107,15 @@ export default function AdminProductForm() {
     e.preventDefault()
 
     try {
-      const parsed = JSON.parse(specsText)
-      setForm(f => ({ ...f, specs: parsed }))
+      const specs = entriesToSpecs(specEntries)
+      setForm(f => ({ ...f, specs }))
 
-      const payload = {
+      const payload: Record<string, any> = {
         ...form,
-        specs: parsed,
+        specs,
+      }
+      if (mainImage) {
+        payload.primary_image = mainImage
       }
 
       if (isEditing) {
@@ -130,8 +156,38 @@ export default function AdminProductForm() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
               <h2 className="text-sm font-semibold text-carbon mb-3 uppercase tracking-wide">Imagen principal</h2>
-              <div className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${mainImage ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 bg-gray-50'}`}>
-                {mainImage ? (
+              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  setUploadingMainImage(true)
+                  try {
+                    const formData = new FormData()
+                    formData.append('image', file)
+                    const { data } = await api.post('/admin/imagenes/producto', formData, {
+                      headers: { 'Content-Type': 'multipart/form-data' },
+                      timeout: 30000,
+                    })
+                    setMainImage(data.data.url)
+                    toast.success('✅ Imagen subida')
+                  } catch (err: any) {
+                    const msg = err?.response?.data?.message || err?.message || 'Error al subir imagen'
+                    toast.error('❌ ' + msg)
+                  } finally {
+                    setUploadingMainImage(false)
+                    e.target.value = ''
+                  }
+                }} />
+              <div onClick={() => !uploadingMainImage && fileInputRef.current?.click()}
+                className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                  uploadingMainImage ? 'opacity-60 cursor-wait' : 'hover:border-gray-300'
+                } ${mainImage ? 'border-primary bg-primary/5' : 'border-gray-200 bg-gray-50'}`}>
+                {uploadingMainImage ? (
+                  <div className="flex flex-col items-center">
+                    <span className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs text-gray-400 mt-2">Subiendo...</p>
+                  </div>
+                ) : mainImage ? (
                   <img src={mainImage} alt="" className="w-full h-full object-cover rounded-xl" />
                 ) : (
                   <>
@@ -300,16 +356,46 @@ export default function AdminProductForm() {
             </div>
           </div>
 
-          {/* Specs JSON */}
+          {/* Specs visual editor */}
           <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <h2 className="text-sm font-semibold text-carbon mb-4 uppercase tracking-wide">Especificaciones técnicas (JSON)</h2>
-            <p className="text-xs text-gray-400 mb-2">Ej: {"{ \"material_caja\": \"Acero\", \"resistencia_agua\": \"5 ATM\" }"}</p>
-            <textarea
-              value={specsText}
-              onChange={e => setSpecsText(e.target.value)}
-              rows={10}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-carbon uppercase tracking-wide">Especificaciones técnicas</h2>
+              <button type="button" onClick={loadDefaultSpecs}
+                className="text-xs text-primary hover:underline">
+                Cargar valores por defecto
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mb-3">Campos comunes para relojería. Podés agregar campos personalizados.</p>
+
+            <div className="space-y-2">
+              {specEntries.map((entry, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input type="text" value={entry.key}
+                    onChange={e => {
+                      const updated = [...specEntries]
+                      updated[i] = { ...updated[i], key: e.target.value }
+                      setSpecEntries(updated)
+                    }}
+                    placeholder="Clave"
+                    className="w-2/5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
+                  <input type="text" value={entry.value}
+                    onChange={e => {
+                      const updated = [...specEntries]
+                      updated[i] = { ...updated[i], value: e.target.value }
+                      setSpecEntries(updated)
+                    }}
+                    placeholder="Valor"
+                    className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
+                  <button type="button" onClick={() => removeSpec(i)}
+                    className="text-gray-300 hover:text-red-500 transition-colors text-sm px-1">✕</button>
+                </div>
+              ))}
+            </div>
+
+            <button type="button" onClick={addSpec}
+              className="mt-3 text-xs text-primary hover:text-primary-dark transition-colors">
+              + Agregar campo
+            </button>
           </div>
 
           {/* Submit */}

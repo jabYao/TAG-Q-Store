@@ -19,44 +19,54 @@ class ImageController extends Controller
     public function uploadProductImage(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'product_id' => 'required|exists:products,id',
+            'product_id' => 'nullable|exists:products,id',
             'image' => 'required|image|mimes:jpeg,png,webp|max:5120', // 5MB max
             'is_primary' => 'nullable|boolean',
             'alt_text' => 'nullable|string|max:255',
         ]);
 
         $file = $request->file('image');
-        $productId = $validated['product_id'];
+        $productId = $validated['product_id'] ?? null;
 
-        $result = $this->cloudinary->upload($file, [
-            'folder' => "tag-q/products/{$productId}",
-        ]);
+        // Subir a Cloudinary
+        $folder = $productId ? "tag-q/products/{$productId}" : 'tag-q/products/pending';
+        $result = $this->cloudinary->upload($file, ['folder' => $folder]);
 
-        $productImage = ProductImage::create([
-            'product_id' => $productId,
-            'cloudinary_url' => $result['secure_url'],
-            'cloudinary_public_id' => $result['public_id'],
-            'alt_text' => $validated['alt_text'] ?? null,
-            'is_primary' => $validated['is_primary'] ?? false,
-            'sort_order' => ProductImage::where('product_id', $productId)->max('sort_order') + 1,
-            'type' => 'gallery',
-        ]);
+        // Si hay product_id, crear registro en BD
+        if ($productId) {
+            $productImage = ProductImage::create([
+                'product_id' => $productId,
+                'cloudinary_url' => $result['secure_url'],
+                'cloudinary_public_id' => $result['public_id'],
+                'alt_text' => $validated['alt_text'] ?? null,
+                'is_primary' => $validated['is_primary'] ?? false,
+                'sort_order' => ProductImage::where('product_id', $productId)->max('sort_order') + 1,
+                'type' => 'gallery',
+            ]);
 
-        // If this is the primary image, unset others
-        if ($productImage->is_primary) {
-            ProductImage::where('product_id', $productId)
-                ->where('id', '!=', $productImage->id)
-                ->update(['is_primary' => false]);
+            if ($productImage->is_primary) {
+                ProductImage::where('product_id', $productId)
+                    ->where('id', '!=', $productImage->id)
+                    ->update(['is_primary' => false]);
+            }
+
+            return response()->json([
+                'data' => [
+                    'id' => $productImage->id,
+                    'url' => $productImage->cloudinary_url,
+                    'public_id' => $productImage->cloudinary_public_id,
+                    'alt_text' => $productImage->alt_text,
+                    'is_primary' => $productImage->is_primary,
+                    'sort_order' => $productImage->sort_order,
+                ],
+            ], 201);
         }
 
+        // Sin product_id: solo devolver la URL
         return response()->json([
             'data' => [
-                'id' => $productImage->id,
-                'url' => $productImage->cloudinary_url,
-                'public_id' => $productImage->cloudinary_public_id,
-                'alt_text' => $productImage->alt_text,
-                'is_primary' => $productImage->is_primary,
-                'sort_order' => $productImage->sort_order,
+                'url' => $result['secure_url'],
+                'public_id' => $result['public_id'],
             ],
         ], 201);
     }

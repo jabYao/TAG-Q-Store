@@ -25,6 +25,8 @@ const Addresses = lazy(() => import('@/pages/public/Addresses'))
 const Landing = lazy(() => import('@/pages/public/Landing'))
 const Policies = lazy(() => import('@/pages/public/Policies'))
 const Contact = lazy(() => import('@/pages/public/Contact'))
+const PaymentResult = lazy(() => import('@/pages/public/PaymentResult'))
+const OrderConfirmation = lazy(() => import('@/pages/public/OrderConfirmation'))
 
 // ─── Auth pages (lazy) ───
 const Login = lazy(() => import('@/pages/auth/Login'))
@@ -87,6 +89,7 @@ export default function AppRouter() {
             <Route path="/landing/:slug" element={<Landing />} />
             <Route path="/politicas" element={<Policies />} />
             <Route path="/contacto" element={<Contact />} />
+            <Route path="/pago/resultado" element={<PaymentResult />} />
 
             {/* Solo invitados (si ya está logueado, redirige a /) */}
             <Route element={<GuestRoute />}>
@@ -102,6 +105,7 @@ export default function AppRouter() {
               <Route path="/perfil" element={<Profile />} />
               <Route path="/mis-pedidos" element={<MyOrders />} />
               <Route path="/mis-pedidos/:id" element={<OrderDetail />} />
+              <Route path="/pedido/confirmacion/:id" element={<OrderConfirmation />} />
               <Route path="/direcciones" element={<Addresses />} />
             </Route>
           </Route>

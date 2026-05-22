@@ -41,6 +41,34 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* Mobile drawer slide-in */
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-slide-in {
+  animation: slide-in 0.25s ease-out;
+}
+
+/* Modal fade-in + scale */
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.animate-modal-in {
+  animation: modal-in 0.2s ease-out;
+}
+
 /* Toast slide-up */
 @keyframes slide-up {
   from {

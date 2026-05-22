@@ -26,7 +26,7 @@ export default function SEO({
 }: SEOProps) {
   const fullTitle = `${title} | ${SITE_NAME}`
   const fullUrl = url ? `${SITE_URL}${url}` : SITE_URL
-  const fullImage = image.startsWith('http') ? image : `${SITE_URL}${image}`
+  const fullImage = typeof image === 'string' && image.startsWith('http') ? image : `${SITE_URL}${image}`
 
   return (
     <Helmet>

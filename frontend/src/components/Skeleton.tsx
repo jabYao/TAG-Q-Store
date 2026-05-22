@@ -126,6 +126,21 @@ export function CategoryCardSkeleton() {
   )
 }
 
+export function HeroSkeleton() {
+  return (
+    <div className="bg-gradient-to-br from-primary to-[#081d55] py-16 md:py-24 lg:py-32">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6">
+        <div className="max-w-2xl space-y-4">
+          <Skeleton className="h-12 md:h-16 w-3/4 bg-white/20" />
+          <Skeleton className="h-5 w-full bg-white/10" />
+          <Skeleton className="h-5 w-5/6 bg-white/10" />
+          <Skeleton className="h-12 w-40 rounded-lg bg-gold/40 mt-6" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function HomeSectionSkeleton() {
   return (
     <div className="space-y-6">

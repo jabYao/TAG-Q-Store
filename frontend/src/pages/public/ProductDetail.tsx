@@ -52,6 +52,23 @@ export default function ProductDetail() {
 
   const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 
+  // ── Hooks incondicionales (antes de cualquier early return) ──
+  const addToCartMutation = useMutation({
+    mutationFn: () => product ? addToCart(product.id, quantity) : Promise.reject(),
+    onSuccess: () => {
+      if (product) toast.success(`${product.name} agregado al carrito`)
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Error al agregar al carrito')
+    },
+  })
+
+  const handleBuyNow = () => {
+    addToCartMutation.mutate(undefined, {
+      onSuccess: () => navigate('/checkout'),
+    })
+  }
+
   if (isLoading) {
     return (
       <>
@@ -95,22 +112,6 @@ export default function ProductDetail() {
     ...(product.specs?.garantia ? [{ label: 'Garantía', value: product.specs.garantia }] : []),
     ...(product.specs?.origen ? [{ label: 'Origen', value: product.specs.origen }] : []),
   ]
-
-  const addToCartMutation = useMutation({
-    mutationFn: () => addToCart(product.id, quantity),
-    onSuccess: () => {
-      toast.success(`${product.name} agregado al carrito`)
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Error al agregar al carrito')
-    },
-  })
-
-  const handleBuyNow = () => {
-    addToCartMutation.mutate(undefined, {
-      onSuccess: () => navigate('/checkout'),
-    })
-  }
 
   return (
     <>

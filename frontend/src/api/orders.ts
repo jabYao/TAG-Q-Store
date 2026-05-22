@@ -26,6 +26,7 @@ export interface OrderData {
   address?: any
   statuses?: any[]
   created_at: string
+  whatsapp?: string
 }
 
 export async function fetchOrders(): Promise<OrderData[]> {
@@ -34,6 +35,8 @@ export async function fetchOrders(): Promise<OrderData[]> {
 }
 
 export async function fetchOrder(id: number): Promise<OrderData> {
-  const { data } = await api.get<{ data: OrderData }>(`/ordenes/${id}`)
-  return data.data
+  const res = await api.get<{ data: OrderData; whatsapp?: string }>(`/ordenes/${id}`)
+  const order = res.data.data
+  order.whatsapp = res.data.whatsapp
+  return order
 }

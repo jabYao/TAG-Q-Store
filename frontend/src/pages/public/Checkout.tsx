@@ -35,9 +35,13 @@ export default function Checkout() {
     onSuccess: (result) => {
       toast.success('Orden creada correctamente')
       if (result.payment_url) {
+        // Redirigir a Wompi
         window.location.href = result.payment_url
+      } else if (result.whatsapp) {
+        // Contraentrega: ir a confirmación + WhatsApp
+        navigate(`/pedido/confirmacion/${result.order.id}`)
       } else {
-        navigate(`/mis-pedidos/${result.order.id}`)
+        navigate(`/pedido/confirmacion/${result.order.id}`)
       }
     },
     onError: (err: any) => {

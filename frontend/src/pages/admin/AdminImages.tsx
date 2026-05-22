@@ -40,17 +40,24 @@ export default function AdminImages() {
     enabled: false,
   })
 
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
   const uploadMutation = useMutation({
     mutationFn: async ({ bannerId, file }: { bannerId: number; file: File }) => {
+      setUploadError(null)
       const result = await uploadBannerImage(file)
       await api.put(`/admin/banners/${bannerId}`, { image_url: result.url, is_active: true })
       return result
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['banners'] })
-      toast.success('Banner actualizado')
+      toast.success('✅ Imagen de banner subida correctamente')
     },
-    onError: () => toast.error('Error al subir banner'),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.message || 'Error al subir la imagen'
+      setUploadError(msg)
+      toast.error('❌ ' + msg)
+    },
   })
 
   const removeMutation = useMutation({
@@ -169,9 +176,21 @@ export default function AdminImages() {
                 }`}>{banner.is_active ? 'Activo' : 'Inactivo'}</span>
               </div>
               <div className="flex gap-2 shrink-0">
-                <button onClick={() => { setUploadingBannerId(banner.id); fileInputRef.current?.click() }}
-                  className="px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
-                  {banner.image_url ? 'Cambiar' : 'Subir'}
+                <button onClick={() => { if (!uploadMutation.isPending) { setUploadingBannerId(banner.id); fileInputRef.current?.click() } }}
+                  disabled={uploadMutation.isPending}
+                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                    uploadMutation.isPending
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-primary text-white hover:bg-primary-dark'
+                  }`}>
+                  {uploadMutation.isPending ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      Subiendo...
+                    </span>
+                  ) : (
+                    banner.image_url ? 'Cambiar' : 'Subir imagen'
+                  )}
                 </button>
                 {banner.image_url && (
                   <button onClick={() => removeMutation.mutate(banner.id)}
