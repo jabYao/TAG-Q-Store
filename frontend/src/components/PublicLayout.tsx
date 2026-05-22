@@ -96,7 +96,7 @@ export default function PublicLayout() {
             </button>
 
             {/* Search (desktop) */}
-            <div className="hidden md:flex items-center gap-2 w-full max-w-xs">
+            <div className="hidden md:flex items-center gap-2 w-full max-w-[240px]">
               <form onSubmit={handleSearch} className="relative w-full">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
                 <input
@@ -110,12 +110,16 @@ export default function PublicLayout() {
             </div>
 
             {/* Logo */}
-            <Link to="/" className="text-[28px] font-bold text-primary tracking-tight">
-              TAG-Q
+            <Link to="/" className="block shrink-0 -ml-4">
+              <img
+                src="https://res.cloudinary.com/dg6iut6sl/image/upload/v1779467883/logo_tagQ_pjb7qz.webp"
+                alt="TAG-Q"
+                className= "h-17 md:h-23 lg:h-26 w-auto"  
+              />
             </Link>
 
             {/* Icons */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-end gap-4 w-full max-w-[240px]">
               {authenticated && user ? (
                 <div className="relative">
                   <button
@@ -220,9 +224,13 @@ export default function PublicLayout() {
                 <Link
                   to="/"
                   onClick={() => setShowMobileMenu(false)}
-                  className="text-[28px] font-bold text-primary tracking-tight"
+                  className="block shrink-0 -ml-2"
                 >
-                  TAG-Q
+                  <img
+                    src="https://res.cloudinary.com/dg6iut6sl/image/upload/v1779467883/logo_tagQ_pjb7qz.webp"
+                    alt="TAG-Q"
+                    className= "h-17 md:h-23 lg:h-26 w-auto"  
+                  />
                 </Link>
                 <button
                   onClick={() => setShowMobileMenu(false)}
