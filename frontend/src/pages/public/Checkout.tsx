@@ -1,27 +1,39 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { fetchCheckoutSummary, placeOrder, fetchAddresses } from '@/api'
+import { placeOrder, fetchAddresses } from '@/api'
+import type { WidgetParams } from '@/api/checkout'
+import { useCartStore } from '@/stores/cartStore'
 import SEO from '@/components/SEO'
 import { CartSkeleton } from '@/components/Skeleton'
 import { toast } from '@/stores/toastStore'
+import WompiPaymentButton from '@/components/WompiPaymentButton'
 
 const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 
+const SHIPPING_FREE_MINIMUM = 400000
+const SHIPPING_COST = 15000
+const TAX_RATE = 0.19
+
 export default function Checkout() {
   const navigate = useNavigate()
+  const { items, count, total, clearCart } = useCartStore()
+  const [hydrated, setHydrated] = useState(false)
+  const [widgetParams, setWidgetParams] = useState<WidgetParams | null>(null)
+  const [orderId, setOrderId] = useState<number | null>(null)
+
+  // Esperar a que Zustand hidrate desde localStorage
+  useEffect(() => {
+    const unsub = useCartStore.persist.onFinishHydration(() => setHydrated(true))
+    if (useCartStore.persist.hasHydrated()) setHydrated(true)
+    return () => unsub()
+  }, [])
   const [step, setStep] = useState<'resumen' | 'envio' | 'pago'>('resumen')
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'wompi' | 'contraentrega'>('wompi')
   const [notes, setNotes] = useState('')
 
-  const { data: summary, isLoading, isError } = useQuery({
-    queryKey: ['checkout', 'summary'],
-    queryFn: fetchCheckoutSummary,
-    retry: false,
-  })
-
-  const { data: addresses } = useQuery({
+  const { data: addresses, isLoading: addrLoading } = useQuery({
     queryKey: ['addresses'],
     queryFn: fetchAddresses,
   })
@@ -31,16 +43,31 @@ export default function Checkout() {
       address_id: selectedAddressId!,
       payment_method: paymentMethod,
       notes: notes || undefined,
+      items: items.map(i => ({
+        product_id: i.product_id,
+        quantity: i.quantity,
+        price: i.price,
+      })),
     }),
     onSuccess: (result) => {
       toast.success('Orden creada correctamente')
-      if (result.payment_url) {
-        // Redirigir a Wompi
-        window.location.href = result.payment_url
-      } else if (result.whatsapp) {
-        // Contraentrega: ir a confirmación + WhatsApp
+
+      if (result.order.payment_method === 'contraentrega') {
+        clearCart()
         navigate(`/pedido/confirmacion/${result.order.id}`)
+        return
+      }
+
+      // Wompi: abrir el widget (el carrito se limpia al redirigir)
+      if (result.widget) {
+        setOrderId(result.order.id)
+        setWidgetParams(result.widget)
+      } else if (result.payment_url) {
+        // Fallback: redirect directo
+        clearCart()
+        window.location.href = result.payment_url
       } else {
+        clearCart()
         navigate(`/pedido/confirmacion/${result.order.id}`)
       }
     },
@@ -49,7 +76,35 @@ export default function Checkout() {
     },
   })
 
-  if (isLoading) {
+  // Compute summary locally
+  const subtotal = total
+  const shippingCost = subtotal >= SHIPPING_FREE_MINIMUM ? 0 : SHIPPING_COST
+  const discount = 0
+  const tax = Math.round((subtotal - discount) * TAX_RATE)
+  const grandTotal = subtotal + shippingCost + tax - discount
+
+  const summary = {
+    items: items.map(i => ({
+      id: i.id,
+      product_id: i.product_id,
+      name: i.name,
+      slug: i.slug ?? '',
+      price: i.price,
+      quantity: i.quantity,
+      image_url: i.image_url,
+      total: i.price * i.quantity,
+    })),
+    subtotal,
+    shipping_cost: shippingCost,
+    shipping_free_minimum: SHIPPING_FREE_MINIMUM,
+    shipping_is_free: shippingCost === 0,
+    discount,
+    tax,
+    total: grandTotal,
+  }
+
+  // Mientras hidrata, mostrar skeleton
+  if (!hydrated) {
     return (
       <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
         <h1 className="text-2xl md:text-3xl font-semibold text-carbon mb-6">Checkout</h1>
@@ -58,7 +113,7 @@ export default function Checkout() {
     )
   }
 
-  if (isError || !summary) {
+  if (items.length === 0) {
     return (
       <div className="max-w-7xl mx-auto px-4 lg:px-6 py-16 text-center">
         <span className="text-5xl">🛒</span>
@@ -70,7 +125,6 @@ export default function Checkout() {
 
   const defaultAddress = addresses?.find(a => a.is_default) ?? addresses?.[0]
 
-  // Steps progress
   const steps = [
     { key: 'resumen', label: 'Resumen' },
     { key: 'envio', label: 'Envío' },
@@ -140,7 +194,11 @@ export default function Checkout() {
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
               <h2 className="text-lg font-semibold text-carbon mb-4">Dirección de envío</h2>
 
-              {addresses && addresses.length > 0 ? (
+              {addrLoading ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-400">Cargando direcciones...</p>
+                </div>
+              ) : addresses && addresses.length > 0 ? (
                 <div className="space-y-3 mb-6">
                   {addresses.map((addr) => (
                     <label key={addr.id} className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -159,6 +217,7 @@ export default function Checkout() {
                         <div>
                           <p className="text-sm font-medium text-carbon">{addr.name}</p>
                           <p className="text-xs text-gray-500">{addr.address_line}</p>
+                          {addr.barrio && <p className="text-xs text-gray-400">Barrio: {addr.barrio}</p>}
                           <p className="text-xs text-gray-500">{addr.city}, {addr.department}</p>
                           <p className="text-xs text-gray-400 mt-0.5">📞 {addr.phone}</p>
                           {addr.is_default && <span className="text-[10px] text-primary font-medium mt-1 inline-block">Predeterminada</span>}
@@ -308,6 +367,14 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* Wompi Widget — abre el modal y redirige al redirectUrl al finalizar */}
+      {widgetParams && (
+        <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm mt-6">
+          <h3 className="text-sm font-semibold text-carbon mb-4 text-center">Completá tu pago con Wompi</h3>
+          <WompiPaymentButton key={widgetParams.reference} params={widgetParams} />
+        </div>
+      )}
     </div>
   )
 }
