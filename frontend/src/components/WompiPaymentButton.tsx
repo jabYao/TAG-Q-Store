@@ -1,5 +1,12 @@
 import { useState, useCallback } from 'react'
-import type { WidgetParams } from '@/api/checkout'
+
+export interface WidgetParams {
+  publicKey: string
+  currency: string
+  amountInCents: number
+  reference: string
+  signature: { integrity: string }
+}
 
 declare global {
   interface Window {
@@ -12,11 +19,11 @@ interface WompiPaymentButtonProps {
 }
 
 /**
- * Botón "Pagar con Wompi" usando la API programática.
+ * Botón "Pagar con Wompi" usando la API programática del Widget Checkout.
  * widget.js se carga desde index.html (una sola vez).
  *
- * SIN redirectUrl para evitar el 403 de CloudFront por localhost.
- * El callback de WidgetCheckout recibe el resultado y navega.
+ * Sin redirectUrl para evitar 403 de CloudFront en localhost.
+ * El callback de WidgetCheckout recibe el resultado y navega a la página de resultado.
  */
 export default function WompiPaymentButton({ params }: WompiPaymentButtonProps) {
   const [opening, setOpening] = useState(false)
@@ -27,15 +34,12 @@ export default function WompiPaymentButton({ params }: WompiPaymentButtonProps) 
     setOpening(true)
 
     try {
-      // Sacar redirectUrl para evitar 403 de CloudFront
-      const { redirectUrl, ...safeParams } = params
-
-      const checkout = new window.WidgetCheckout(safeParams)
+      const checkout = new window.WidgetCheckout(params)
       checkout.open((result: any) => {
         const tx = result?.transaction
         console.log('[Wompi] Transaction:', tx?.id, tx?.status)
 
-        // Navegar al resultado usando la referencia que ya tenemos
+        // Navegar al resultado usando la referencia
         if (params.reference) {
           window.location.href = `/pago/resultado?reference=${params.reference}`
         }

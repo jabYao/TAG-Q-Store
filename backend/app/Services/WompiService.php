@@ -43,26 +43,40 @@ class WompiService
 
     /**
      * Generar URL de redirección para pago Wompi.
+     *
+     * Formato Wompi (redirect):
+     *   Sandbox:    https://sandbox.wompi.co/p/{publicKey}?params
+     *   Producción: https://checkout.wompi.co/p/{publicKey}?params
      */
     public function generatePaymentUrl(string $reference, float $amount, string $currency = 'COP', array $extra = []): string
     {
         $amountInCents = (int) round($amount * 100);
         $signature = $this->generateSignature($reference, $amount, $currency);
 
-        $params = http_build_query([
-            'currency' => $currency,
-            'amount-in-cents' => $amountInCents,
-            'reference' => $reference,
-            'signature:integrity' => $signature,
-            'redirect-url' => $extra['redirect_url'] ?? url('/api/pago/resultado'),
-        ]);
+        // Construir query string manualmente para preservar ':' en signature:integrity
+        // http_build_query codifica ':' como %3A, lo que rompe el parseo de Wompi
+        $queryParts = [
+            'currency=' . urlencode($currency),
+            'amount-in-cents=' . urlencode($amountInCents),
+            'reference=' . urlencode($reference),
+            'signature:integrity=' . urlencode($signature),
+        ];
 
-        if (!empty($extra['customer_email'])) {
-            $params .= '&customer-email=' . urlencode($extra['customer_email']);
+        // Solo incluir redirect-url si es una URL pública (no localhost)
+        // CloudFront de Wompi bloquea redirects a localhost/127.0.0.1
+        $redirectUrl = $extra['redirect_url'] ?? null;
+        if ($redirectUrl && !str_contains($redirectUrl, 'localhost') && !str_contains($redirectUrl, '127.0.0.1')) {
+            $queryParts[] = 'redirect-url=' . urlencode($redirectUrl);
         }
 
-        // Wompi redirect URL format: /transactions/{public-key}/redirect?params
-        return "{$this->baseUrl}/transactions/{$this->publicKey}/redirect?{$params}";
+        if (!empty($extra['customer_email'])) {
+            $queryParts[] = 'customer-email=' . urlencode($extra['customer_email']);
+        }
+
+        $queryString = implode('&', $queryParts);
+
+        // Las keys de sandbox también funcionan contra checkout.wompi.co
+        return "https://checkout.wompi.co/p/{$this->publicKey}?{$queryString}";
     }
 
     /**
@@ -115,6 +129,27 @@ class WompiService
             ]);
             return null;
         }
+    }
+
+    /**
+     * Obtener parámetros para el Widget Checkout de Wompi (frontend).
+     * Retorna los datos en camelCase como los espera WidgetCheckout.
+     * Sin redirectUrl para evitar 403 de CloudFront en localhost.
+     */
+    public function getWidgetParams(string $reference, float $amount, string $currency = 'COP'): array
+    {
+        $amountInCents = (int) round($amount * 100);
+        $integritySignature = $this->generateSignature($reference, $amount, $currency);
+
+        return [
+            'publicKey' => $this->publicKey,
+            'currency' => $currency,
+            'amountInCents' => $amountInCents,
+            'reference' => $reference,
+            'signature' => [
+                'integrity' => $integritySignature,
+            ],
+        ];
     }
 
     public function getPublicKey(): string

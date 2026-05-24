@@ -48,7 +48,7 @@ export default function MyOrders() {
           {orders.map((order) => {
             const status = statusLabels[order.status] ?? { label: order.status, color: 'bg-gray-100 text-gray-700' }
             return (
-              <Link key={order.id} to={`/mis-pedidos/${order.id}`}
+              <Link key={order.id} to={`/mis-pedidos/${order.order_number}`}
                 className="block bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">

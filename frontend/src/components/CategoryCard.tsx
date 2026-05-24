@@ -8,17 +8,25 @@ interface CategoryCardProps {
   count?: number
 }
 
-export default function CategoryCard({ name, slug, emoji, count }: CategoryCardProps) {
+export default function CategoryCard({ name, slug, emoji, count, imageUrl }: CategoryCardProps) {
   return (
     <Link
       to={`/categoria/${slug}`}
       className="group relative bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1"
     >
-      {/* Image placeholder */}
-      <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <span className="text-6xl md:text-7xl group-hover:scale-110 transition-transform duration-300">
-          {emoji}
-        </span>
+      {/* Image */}
+      <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          />
+        ) : (
+          <span className="text-6xl md:text-7xl group-hover:scale-110 transition-transform duration-300">
+            {emoji}
+          </span>
+        )}
       </div>
 
       {/* Info */}

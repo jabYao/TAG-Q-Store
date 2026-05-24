@@ -22,7 +22,7 @@ export default function OrderDetail() {
 
   const { data: order, isLoading, isError } = useQuery({
     queryKey: ['order', id],
-    queryFn: () => fetchOrder(Number(id)),
+    queryFn: () => fetchOrder(id!),
     enabled: !!id,
   })
 

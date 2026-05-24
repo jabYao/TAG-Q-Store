@@ -11,7 +11,7 @@ export default function OrderConfirmation() {
 
   const { data: order, isLoading, isError } = useQuery({
     queryKey: ['order', id],
-    queryFn: () => fetchOrder(Number(id)),
+    queryFn: () => fetchOrder(id!),
     enabled: !!id,
   })
 
@@ -99,7 +99,7 @@ export default function OrderConfirmation() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
-            to={`/mis-pedidos/${order.id}`}
+            to={`/mis-pedidos/${order.order_number}`}
             className="text-primary hover:underline text-sm font-medium"
           >
             Ver detalle del pedido →

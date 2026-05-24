@@ -29,7 +29,7 @@
 - **Skills:** Si creas un componente reutilizable o lógica de negocio clave, invoca a `skillsCreator` y referencia la skill aquí. No crear componentes duplicados si existe una skill aplicable. Antes de iniciar una tarea, identificar si requiere una skill existente o una nueva skill.
 - **Emgram:** Cada decisión importante (estructura de BD, flujo de Wompi, reglas de checkout) debe ser registrada en Emgram con `mem_save`.
 - **Tipado:** TypeScript estricto en frontend, Laravel Resources en backend.
-- **Wompi:** Usar API de transacciones para redirección (NO widget embebido). Llaves de Sandbox disponibles.
+- **Wompi:** Usar Widget Checkout embebido (widget.js) para el flujo de pago. Sin redirectUrl para evitar problemas con CloudFront en localhost. Llaves de Sandbox disponibles.
 - **KPIs:** Definir KPIs para imágenes (banners y productos) en el flujo de admin.
 - **Orden:** No implementar sin seguir el orden de fases (ver sección Fases).
 - **Consistencia:** Mantener coherencia entre backend, frontend, APIs y mocks.
@@ -105,7 +105,7 @@
 - [x] Cálculo de subtotal, envío, total
 - [x] Envío gratis desde $400.000 COP
 - [x] Checkout en pasos (resumen, dirección, pago)
-- [x] Redirección a Wompi (NO widget)
+- [x] Widget Checkout Wompi embebido
 
 ### Fase 7 — Webhooks, pagos y automatización ✅
 - [x] Webhook Wompi con validación de firma

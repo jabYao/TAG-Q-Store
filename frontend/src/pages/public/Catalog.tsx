@@ -166,11 +166,14 @@ export default function Catalog() {
                 {products.map((product) => (
                   <ProductCard
                     key={product.slug}
+                    productId={product.id}
                     name={product.name}
                     slug={product.slug}
                     price={product.price}
                     originalPrice={product.original_price ?? undefined}
                     imageUrl={product.thumbnail ?? product.primary_image ?? undefined}
+                    reference={product.sku}
+                    isOutOfStock={product.is_out_of_stock}
                     badge={
                       product.discount_percent && product.discount_percent >= 10
                         ? { label: `-${product.discount_percent}%`, variant: 'gold' as const }

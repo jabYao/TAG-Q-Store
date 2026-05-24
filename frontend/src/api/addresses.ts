@@ -5,6 +5,7 @@ export interface AddressData {
   name: string
   phone: string
   address_line: string
+  barrio: string | null
   city: string
   department: string
   zip: string | null
@@ -16,6 +17,7 @@ export interface AddressFormData {
   name: string
   phone: string
   address_line: string
+  barrio?: string
   city: string
   department: string
   zip?: string

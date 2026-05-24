@@ -374,11 +374,14 @@ export default function ProductDetail() {
               {relatedData.data.filter(p => p.slug !== product.slug).slice(0, 4).map((p) => (
                 <ProductCard
                   key={p.slug}
+                  productId={p.id}
                   name={p.name}
                   slug={p.slug}
                   price={p.price}
                   originalPrice={p.original_price ?? undefined}
                   imageUrl={p.primary_image ?? undefined}
+                  reference={(p as any).sku}
+                  isOutOfStock={p.is_out_of_stock}
                   badge={
                     p.discount_percent && p.discount_percent >= 10
                       ? { label: `-${p.discount_percent}%`, variant: 'gold' as const }

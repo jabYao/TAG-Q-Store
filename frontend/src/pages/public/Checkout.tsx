@@ -1,13 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { placeOrder, fetchAddresses } from '@/api'
-import type { WidgetParams } from '@/api/checkout'
 import { useCartStore } from '@/stores/cartStore'
 import SEO from '@/components/SEO'
 import { CartSkeleton } from '@/components/Skeleton'
 import { toast } from '@/stores/toastStore'
-import WompiPaymentButton from '@/components/WompiPaymentButton'
 
 const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 
@@ -19,8 +17,6 @@ export default function Checkout() {
   const navigate = useNavigate()
   const { items, count, total, clearCart } = useCartStore()
   const [hydrated, setHydrated] = useState(false)
-  const [widgetParams, setWidgetParams] = useState<WidgetParams | null>(null)
-  const [orderId, setOrderId] = useState<number | null>(null)
 
   // Esperar a que Zustand hidrate desde localStorage
   useEffect(() => {
@@ -38,6 +34,43 @@ export default function Checkout() {
     queryFn: fetchAddresses,
   })
 
+  // Abrir widget Wompi directamente después de crear la orden
+  const openWompiWidget = useCallback((widget: any) => {
+    // Esperar a que widget.js cargue (si no cargó aún)
+    const tryOpen = () => {
+      if (window.WidgetCheckout) {
+        const checkout = new window.WidgetCheckout(widget)
+        checkout.open((result: any) => {
+          const tx = result?.transaction
+          if (widget.reference) {
+            // Pasar el transaction ID para que el backend consulte directo a Wompi
+            const txId = tx?.id ? `&transaction=${tx.id}` : ''
+            window.location.href = `/pago/resultado?reference=${widget.reference}${txId}`
+          }
+        })
+      }
+    }
+
+    // Si WidgetCheckout ya está disponible, abrirlo ahora
+    if (window.WidgetCheckout) {
+      tryOpen()
+      return
+    }
+
+    // Si no, esperar a que el script cargue (máximo 5s)
+    let attempts = 0
+    const interval = setInterval(() => {
+      attempts++
+      if (window.WidgetCheckout) {
+        clearInterval(interval)
+        tryOpen()
+      } else if (attempts >= 50) {
+        clearInterval(interval)
+        toast.error('Error al cargar Wompi. Intentá de nuevo.')
+      }
+    }, 100)
+  }, [])
+
   const placeOrderMutation = useMutation({
     mutationFn: () => placeOrder({
       address_id: selectedAddressId!,
@@ -50,25 +83,21 @@ export default function Checkout() {
       })),
     }),
     onSuccess: (result) => {
-      toast.success('Orden creada correctamente')
-
       if (result.order.payment_method === 'contraentrega') {
         clearCart()
-        navigate(`/pedido/confirmacion/${result.order.id}`)
+        navigate(`/pedido/confirmacion/${result.order.order_number}`)
         return
       }
 
-      // Wompi: abrir el widget (el carrito se limpia al redirigir)
+      // Wompi: crear orden + abrir widget en un solo paso
       if (result.widget) {
-        setOrderId(result.order.id)
-        setWidgetParams(result.widget)
+        openWompiWidget(result.widget)
       } else if (result.payment_url) {
-        // Fallback: redirect directo
         clearCart()
         window.location.href = result.payment_url
       } else {
         clearCart()
-        navigate(`/pedido/confirmacion/${result.order.id}`)
+        navigate(`/pedido/confirmacion/${result.order.order_number}`)
       }
     },
     onError: (err: any) => {
@@ -312,14 +341,43 @@ export default function Checkout() {
                   className="flex-1 py-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                   ← Volver
                 </button>
-                <button onClick={() => {
-                  if (!selectedAddressId) { toast.error('Seleccioná una dirección de envío'); setStep('envio'); return }
-                  placeOrderMutation.mutate()
-                }}
-                  disabled={placeOrderMutation.isPending}
-                  className="flex-1 bg-primary text-white py-3 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-colors disabled:opacity-50">
-                  {placeOrderMutation.isPending ? 'PROCESANDO...' : `PAGAR ${formatPrice(summary.total)}`}
-                </button>
+
+                {paymentMethod === 'wompi' ? (
+                  <button
+                    onClick={() => {
+                      if (!selectedAddressId) { toast.error('Seleccioná una dirección de envío'); setStep('envio'); return }
+                      placeOrderMutation.mutate()
+                    }}
+                    disabled={placeOrderMutation.isPending}
+                    className="flex-1 bg-[#0051FF] hover:bg-[#0040CC] active:bg-[#0033AA] text-white py-3 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {placeOrderMutation.isPending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        CREANDO ORDEN...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                          <line x1="1" y1="10" x2="23" y2="10" />
+                        </svg>
+                        Pagar con Wompi
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (!selectedAddressId) { toast.error('Seleccioná una dirección de envío'); setStep('envio'); return }
+                      placeOrderMutation.mutate()
+                    }}
+                    disabled={placeOrderMutation.isPending}
+                    className="flex-1 bg-primary text-white py-3 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-colors disabled:opacity-50"
+                  >
+                    {placeOrderMutation.isPending ? 'CREANDO ORDEN...' : `CONFIRMAR PEDIDO`}
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -368,13 +426,7 @@ export default function Checkout() {
         </div>
       </div>
 
-      {/* Wompi Widget — abre el modal y redirige al redirectUrl al finalizar */}
-      {widgetParams && (
-        <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm mt-6">
-          <h3 className="text-sm font-semibold text-carbon mb-4 text-center">Completá tu pago con Wompi</h3>
-          <WompiPaymentButton key={widgetParams.reference} params={widgetParams} />
-        </div>
-      )}
+
     </div>
   )
 }

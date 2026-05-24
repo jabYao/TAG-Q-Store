@@ -53,7 +53,7 @@ export default function Addresses() {
     onError: () => toast.error('Error al eliminar'),
   })
 
-  const resetForm = () => setForm({ name: '', phone: '', address_line: '', city: '', department: '', zip: '', reference: '', is_default: false })
+  const resetForm = () => setForm({ name: '', phone: '', address_line: '', barrio: '', city: '', department: '', zip: '', reference: '', is_default: false })
 
   const handleSave = (id?: number) => {
     if (!form.name.trim() || !form.address_line.trim() || !form.city.trim() || !form.department.trim()) {
@@ -67,6 +67,7 @@ export default function Addresses() {
     setEditingId(addr.id)
     setForm({
       name: addr.name, phone: addr.phone, address_line: addr.address_line,
+      barrio: addr.barrio ?? '',
       city: addr.city, department: addr.department, zip: addr.zip ?? '',
       reference: addr.reference ?? '', is_default: addr.is_default,
     })
@@ -103,6 +104,11 @@ export default function Addresses() {
               <label className="text-xs text-gray-400 block mb-1">Dirección *</label>
               <input type="text" value={form.address_line} onChange={e => setForm(f => ({ ...f, address_line: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs text-gray-400 block mb-1">Barrio / Vecindario</label>
+              <input type="text" value={form.barrio ?? ''} onChange={e => setForm(f => ({ ...f, barrio: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Ej: El Poblado, Chapinero, etc." />
             </div>
             <div>
               <label className="text-xs text-gray-400 block mb-1">Ciudad *</label>
@@ -155,6 +161,7 @@ export default function Addresses() {
                 {addr.is_default && <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Predeterminada</span>}
               </div>
               <p className="text-xs text-gray-500 mt-0.5">{addr.address_line}</p>
+              {addr.barrio && <p className="text-xs text-gray-400">Barrio: {addr.barrio}</p>}
               <p className="text-xs text-gray-500">{addr.city}, {addr.department}</p>
               <p className="text-xs text-gray-400 mt-0.5">📞 {addr.phone}</p>
               {addr.reference && <p className="text-[10px] text-gray-300 mt-0.5">📍 {addr.reference}</p>}

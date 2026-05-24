@@ -27,10 +27,25 @@ export async function fetchCheckoutSummary(): Promise<CheckoutSummary> {
   return data.data
 }
 
+export interface PlaceOrderInputItem {
+  product_id: number
+  quantity: number
+  price: number
+}
+
 export interface PlaceOrderInput {
   address_id: number
   payment_method: 'wompi' | 'contraentrega'
   notes?: string
+  items?: PlaceOrderInputItem[]
+}
+
+export interface WidgetParams {
+  publicKey: string
+  currency: string
+  amountInCents: number
+  reference: string
+  signature: { integrity: string }
 }
 
 export interface OrderResult {
@@ -43,6 +58,7 @@ export interface OrderResult {
   }
   payment_url: string | null
   whatsapp?: string
+  widget?: WidgetParams | null
 }
 
 export async function placeOrder(input: PlaceOrderInput): Promise<OrderResult> {

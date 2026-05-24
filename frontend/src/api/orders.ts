@@ -34,8 +34,8 @@ export async function fetchOrders(): Promise<OrderData[]> {
   return data.data
 }
 
-export async function fetchOrder(id: number): Promise<OrderData> {
-  const res = await api.get<{ data: OrderData; whatsapp?: string }>(`/ordenes/${id}`)
+export async function fetchOrder(orderNumber: string): Promise<OrderData> {
+  const res = await api.get<{ data: OrderData; whatsapp?: string }>(`/ordenes/${orderNumber}`)
   const order = res.data.data
   order.whatsapp = res.data.whatsapp
   return order

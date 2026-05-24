@@ -8,7 +8,7 @@ import PromoBanner from '@/components/PromoBanner'
 import SEO from '@/components/SEO'
 import { HeroSkeleton, ProductGridSkeleton, CategoryCardSkeleton } from '@/components/Skeleton'
 
-function toProductCard(p: { name: string; slug: string; price: number; original_price: number | null; primary_image: string | null; thumbnail: string | null; is_featured: boolean; is_new: boolean; discount_percent: number | null }) {
+function toProductCard(p: { id: number; name: string; slug: string; price: number; original_price: number | null; primary_image: string | null; thumbnail: string | null; is_featured: boolean; is_new: boolean; discount_percent: number | null; sku: string; is_out_of_stock?: boolean }) {
   const badge = p.discount_percent && p.discount_percent >= 10
     ? { label: `-${p.discount_percent}%`, variant: 'gold' as const }
     : p.is_new
@@ -18,19 +18,31 @@ function toProductCard(p: { name: string; slug: string; price: number; original_
         : undefined
 
   return {
+    productId: p.id,
     name: p.name,
     slug: p.slug,
     price: p.price,
     originalPrice: p.original_price ?? undefined,
     imageUrl: p.thumbnail ?? p.primary_image ?? undefined,
+    reference: p.sku,
+    isOutOfStock: p.is_out_of_stock ?? false,
     badge,
   }
 }
 
-const categoryEmojis: Record<string, string> = {
-  dama: '👩',
-  caballero: '👔',
-  branded: '⭐',
+const categoryMeta: Record<string, { emoji: string; imageUrl: string }> = {
+  dama: {
+    emoji: '👩',
+    imageUrl: 'https://res.cloudinary.com/dg6iut6sl/image/upload/v1779478950/imagen-dama-categoria._zpfbhd.png',
+  },
+  caballero: {
+    emoji: '👔',
+    imageUrl: 'https://res.cloudinary.com/dg6iut6sl/image/upload/v1779479177/imagen-caballero-cateogoria._ypo79i.png',
+  },
+  branded: {
+    emoji: '⭐',
+    imageUrl: 'https://res.cloudinary.com/dg6iut6sl/image/upload/v1779478924/promociones_h5ocxe.png',
+  },
 }
 
 const brandNames = [
@@ -129,7 +141,8 @@ export default function Home() {
                 <CategoryCard
                   name={cat.name}
                   slug={cat.slug}
-                  emoji={categoryEmojis[cat.slug] || '⌚'}
+                  emoji={categoryMeta[cat.slug]?.emoji || '⌚'}
+                  imageUrl={categoryMeta[cat.slug]?.imageUrl}
                   count={cat.products_count}
                 />
               </div>
@@ -152,9 +165,11 @@ export default function Home() {
             <ProductGridSkeleton count={8} />
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                {featured?.data?.map((product) => (
-                  <ProductCard key={product.slug} {...toProductCard(product)} />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {featured?.data?.map((product, index) => (
+                  <div key={product.slug} className={index >= 6 ? 'md:hidden lg:block' : ''}>
+                    <ProductCard {...toProductCard(product)} />
+                  </div>
                 ))}
               </div>
 

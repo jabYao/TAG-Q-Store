@@ -87,7 +87,7 @@ class WebhookController extends Controller
                 'wompi_transaction_id' => $transactionId,
                 'status' => $status,
                 'amount' => ($transaction['amount_in_cents'] ?? 0) / 100,
-                'amount_in_cents' => ($transaction['amount_in_cents'] ?? 0) / 100,
+                'amount_in_cents' => $transaction['amount_in_cents'] ?? 0,
                 'currency' => $transaction['currency'] ?? 'COP',
                 'customer_email' => $transaction['customer_email'] ?? null,
                 'payment_method_type' => $transaction['payment_method_type'] ?? null,
@@ -135,7 +135,7 @@ class WebhookController extends Controller
     public function paymentResult(Request $request): JsonResponse
     {
         $reference = $request->query('reference');
-        $transactionId = $request->query('id');
+        $transactionId = $request->query('id') ?: $request->query('transaction');
 
         if (!$reference) {
             return response()->json(['message' => 'Referencia requerida'], 422);
@@ -147,10 +147,48 @@ class WebhookController extends Controller
             return response()->json(['message' => 'Orden no encontrada'], 404);
         }
 
-        // Si hay transaction ID, consultar estado actual en Wompi
-        if ($transactionId) {
+        // Si hay transaction ID y la orden sigue pending, consultar directo a Wompi
+        if ($transactionId && $order->payment_status === 'pending') {
             $transaction = $this->wompi->getTransaction($transactionId);
-            // Actualizar payment si existe información más reciente
+
+            if ($transaction && isset($transaction['data']['status'])) {
+                $status = $transaction['data']['status'];
+                $amountInCents = $transaction['data']['amount_in_cents'] ?? 0;
+
+                // Crear o actualizar payment
+                Payment::updateOrCreate(
+                    ['reference' => $reference],
+                    [
+                        'order_id' => $order->id,
+                        'wompi_transaction_id' => $transactionId,
+                        'status' => $status,
+                        'amount' => $amountInCents / 100,
+                        'amount_in_cents' => $amountInCents,
+                        'currency' => $transaction['data']['currency'] ?? 'COP',
+                        'customer_email' => $transaction['data']['customer_email'] ?? null,
+                        'payment_method_type' => $transaction['data']['payment_method_type'] ?? null,
+                        'installments' => $transaction['data']['installments'] ?? null,
+                        'wompi_response' => $transaction['data'],
+                        'processed_at' => now(),
+                    ]
+                );
+
+                // Disparar evento según estado (solo si la orden sigue pendiente)
+                match ($status) {
+                    'APPROVED' => event(new PaymentApproved($order, [
+                        'transaction_id' => $transactionId,
+                    ])),
+                    'DECLINED', 'REJECTED', 'VOIDED', 'ERROR' => event(new PaymentRejected(
+                        $order,
+                        ['transaction_id' => $transactionId],
+                        "Pago {$status}"
+                    )),
+                    default => null,
+                };
+
+                // Recargar orden para reflejar cambios
+                $order->refresh();
+            }
         }
 
         return response()->json([

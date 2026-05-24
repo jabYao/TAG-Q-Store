@@ -57,16 +57,13 @@ class RetryPendingPayments extends Command
 
                         if (in_array($newStatus, ['APPROVED', 'DECLINED', 'REJECTED', 'VOIDED', 'ERROR'])) {
                             $order = $payment->order;
-                            $eventClass = $newStatus === 'APPROVED'
-                                ? \App\Events\PaymentApproved::class
-                                : \App\Events\PaymentRejected::class;
+                            $eventData = ['transaction_id' => $payment->wompi_transaction_id, 'payment_id' => $payment->id];
 
-                            $reason = $newStatus === 'APPROVED' ? '' : "Pago {$newStatus} (reintento)";
-                            event(new $eventClass(
-                                $order,
-                                ['transaction_id' => $payment->wompi_transaction_id, 'payment_id' => $payment->id],
-                                $reason
-                            ));
+                            if ($newStatus === 'APPROVED') {
+                                event(new \App\Events\PaymentApproved($order, $eventData));
+                            } else {
+                                event(new \App\Events\PaymentRejected($order, $eventData, "Pago {$newStatus} (reintento)"));
+                            }
 
                             $this->info("  → Pago actualizado a {$newStatus}");
                         }

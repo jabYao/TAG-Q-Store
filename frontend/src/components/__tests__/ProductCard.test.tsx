@@ -8,6 +8,7 @@ const renderWithRouter = (ui: React.ReactElement) =>
 
 describe('ProductCard', () => {
   const defaultProps = {
+    productId: 1,
     name: 'Reloj Clásico',
     slug: 'reloj-clasico',
     price: 150000,
@@ -45,6 +46,21 @@ describe('ProductCard', () => {
       <ProductCard {...defaultProps} badge={{ label: 'Nuevo', variant: 'primary' }} />,
     )
     expect(screen.getByText('Nuevo')).toBeInTheDocument()
+  })
+
+  it('renders reference when provided', () => {
+    renderWithRouter(<ProductCard {...defaultProps} reference="TAG-001" />)
+    expect(screen.getByText('Ref: TAG-001')).toBeInTheDocument()
+  })
+
+  it('does not show reference when not provided', () => {
+    renderWithRouter(<ProductCard {...defaultProps} />)
+    expect(screen.queryByText(/Ref:/)).not.toBeInTheDocument()
+  })
+
+  it('renders buy button', () => {
+    renderWithRouter(<ProductCard {...defaultProps} />)
+    expect(screen.getByLabelText('Comprar')).toBeInTheDocument()
   })
 
   it('links to product detail', () => {

@@ -16,3 +16,8 @@ Artisan::command('telescope:prune-daily', function () {
 Artisan::command('payments:retry-pending:regular', function () {
     $this->call('payments:retry-pending', ['--hours' => 4, '--max-retries' => 3]);
 })->purpose('Reintentar pagos pendientes cada 30 minutos')->everyThirtyMinutes();
+
+// Release expired stock every 10 minutes
+Artisan::command('orders:release-expired-stock:regular', function () {
+    $this->call('orders:release-expired-stock', ['--minutes' => 30]);
+})->purpose('Liberar stock de órdenes pendientes vencidas cada 10 minutos')->everyTenMinutes();

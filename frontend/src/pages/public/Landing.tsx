@@ -2,14 +2,14 @@ import { useParams, Link } from 'react-router-dom'
 import ProductCard from '@/components/ProductCard'
 
 const mockProducts = [
-  { name: 'Tommy Hilfiger Chronograph', slug: 'tommy-chronograph', price: 250000, originalPrice: undefined, badge: { label: 'MÁS VENDIDO', variant: 'gold' as const } },
-  { name: 'Casio G-Shock Digital', slug: 'casio-gshock', price: 180000, originalPrice: 220000, badge: { label: '-18%', variant: 'gold' as const } },
-  { name: 'Titan Edge Automatic', slug: 'titan-edge', price: 320000, originalPrice: undefined, badge: undefined },
-  { name: 'Guess Ultra Thin', slug: 'guess-ultra', price: 195000, originalPrice: undefined, badge: { label: 'NUEVO', variant: 'primary' as const } },
-  { name: 'Tommy Hilfiger Classic', slug: 'tommy-classic', price: 145000, originalPrice: undefined, badge: undefined },
-  { name: 'Citizen Eco-Drive', slug: 'citizen-eco', price: 450000, originalPrice: undefined, badge: { label: 'PREMIUM', variant: 'primary' as const } },
-  { name: 'Casio Vintage', slug: 'casio-vintage', price: 89000, originalPrice: 120000, badge: { label: '-26%', variant: 'gold' as const } },
-  { name: 'Michael Kors Access', slug: 'mk-access', price: 380000, originalPrice: undefined, badge: undefined },
+  { productId: 1, name: 'Tommy Hilfiger Chronograph', slug: 'tommy-chronograph', price: 250000, originalPrice: undefined, badge: { label: 'MÁS VENDIDO', variant: 'gold' as const } },
+  { productId: 2, name: 'Casio G-Shock Digital', slug: 'casio-gshock', price: 180000, originalPrice: 220000, badge: { label: '-18%', variant: 'gold' as const } },
+  { productId: 3, name: 'Titan Edge Automatic', slug: 'titan-edge', price: 320000, originalPrice: undefined, badge: undefined },
+  { productId: 4, name: 'Guess Ultra Thin', slug: 'guess-ultra', price: 195000, originalPrice: undefined, badge: { label: 'NUEVO', variant: 'primary' as const } },
+  { productId: 5, name: 'Tommy Hilfiger Classic', slug: 'tommy-classic', price: 145000, originalPrice: undefined, badge: undefined },
+  { productId: 6, name: 'Citizen Eco-Drive', slug: 'citizen-eco', price: 450000, originalPrice: undefined, badge: { label: 'PREMIUM', variant: 'primary' as const } },
+  { productId: 7, name: 'Casio Vintage', slug: 'casio-vintage', price: 89000, originalPrice: 120000, badge: { label: '-26%', variant: 'gold' as const } },
+  { productId: 8, name: 'Michael Kors Access', slug: 'mk-access', price: 380000, originalPrice: undefined, badge: undefined },
 ]
 
 const collections: Record<string, { name: string; tagline: string; description: string; products: typeof mockProducts }> = {

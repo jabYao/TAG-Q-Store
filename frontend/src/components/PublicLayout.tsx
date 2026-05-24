@@ -5,6 +5,7 @@ import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { PageSkeleton } from '@/components/PageSkeleton'
 import Footer from '@/components/Footer'
+import CartDrawer from '@/components/CartDrawer'
 import { fetchTopBarSettings } from '@/api'
 import type { TopBarMessage } from '@/api/settings'
 
@@ -25,6 +26,7 @@ export default function PublicLayout() {
   const { user, authenticated, logout } = useAuthStore()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showCartDrawer, setShowCartDrawer] = useState(false)
   const [topBarMessages, setTopBarMessages] = useState<TopBarMessage[]>([
     { icon: '🚚', text: 'ENVÍO GRATIS EN PEDIDOS SOBRE $400.000' },
     { icon: '💳', text: 'PAGO SEGURO' },
@@ -176,14 +178,18 @@ export default function PublicLayout() {
                   👤
                 </Link>
               )}
-              <Link to="/carrito" className="text-primary hover:text-primary-dark transition-colors text-xl relative" aria-label="Carrito">
+              <button
+                onClick={() => setShowCartDrawer(true)}
+                className="text-primary hover:text-primary-dark transition-colors text-xl relative"
+                aria-label="Carrito"
+              >
                 🛒
                 {cartCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-gold text-carbon text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                     {cartCount > 99 ? '99+' : cartCount}
                   </span>
                 )}
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -356,6 +362,9 @@ export default function PublicLayout() {
           </div>
         </>
       )}
+
+      {/* Cart Drawer */}
+      <CartDrawer open={showCartDrawer} onClose={() => setShowCartDrawer(false)} />
 
       {/* Main content */}
       <main className="flex-1">
