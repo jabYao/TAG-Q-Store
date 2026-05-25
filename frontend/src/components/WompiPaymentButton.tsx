@@ -6,6 +6,7 @@ interface WidgetParams {
   amountInCents: number
   reference: string
   signature: { integrity: string }
+  redirectUrl?: string
 }
 
 interface WidgetCheckoutInstance {
@@ -44,7 +45,10 @@ export default function WompiPaymentButton({ params }: WompiPaymentButtonProps) 
     renderedRef.current = true
 
     try {
-      const checkout = new window.WidgetCheckout(params)
+      const checkout = new window.WidgetCheckout({
+        ...params,
+        redirectUrl: `${window.location.origin}/pago/resultado?reference=${params.reference}`,
+      })
       checkout.renderPurchaseButton(containerRef.current)
     } catch (e) {
       console.error('[Wompi] Error al renderizar botón:', e)
@@ -54,7 +58,10 @@ export default function WompiPaymentButton({ params }: WompiPaymentButtonProps) 
       btn.className = 'w-full max-w-md bg-[#0051FF] hover:bg-[#0040CC] text-white font-semibold py-3.5 px-6 rounded-lg text-sm'
       btn.onclick = () => {
         try {
-          const checkout = new window.WidgetCheckout(params)
+          const checkout = new window.WidgetCheckout({
+            ...params,
+            redirectUrl: `${window.location.origin}/pago/resultado?reference=${params.reference}`,
+          })
           checkout.open((result: any) => {
             const tx = result?.transaction
             const txParam = tx?.id ? `&transaction=${tx.id}` : ''
