@@ -118,7 +118,6 @@ export default function AdminOrderDetail() {
           <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="font-medium text-carbon">{formatPrice(order.subtotal)}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Envío</span><span className={order.shipping_cost === 0 ? 'text-green-600 font-medium' : 'text-carbon'}>{order.shipping_cost === 0 ? 'GRATIS' : formatPrice(order.shipping_cost)}</span></div>
           {order.discount > 0 && <div className="flex justify-between text-green-600"><span>Descuento</span><span>-{formatPrice(order.discount)}</span></div>}
-          <div className="flex justify-between"><span className="text-gray-500">IVA</span><span className="font-medium text-carbon">{formatPrice(order.tax)}</span></div>
           <div className="border-t border-gray-100 pt-2 flex justify-between"><span className="font-semibold text-carbon">Total</span><span className="font-bold text-lg text-carbon">{formatPrice(order.total)}</span></div>
         </div>
         {order.payment_method && <p className="text-xs text-gray-400 mt-3">Pago: {order.payment_method === 'wompi' ? '💳 Wompi' : '💰 Contraentrega'} · Estado: {order.payment_status ?? '—'}</p>}

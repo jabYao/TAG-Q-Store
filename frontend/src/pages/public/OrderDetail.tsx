@@ -116,10 +116,6 @@ export default function OrderDetail() {
                 <span>-{formatPrice(order.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-gray-500">IVA</span>
-              <span className="font-medium text-carbon">{formatPrice(order.tax)}</span>
-            </div>
             <div className="border-t border-gray-100 pt-2 flex justify-between">
               <span className="font-semibold text-carbon">Total</span>
               <span className="font-bold text-lg text-carbon">{formatPrice(order.total)}</span>

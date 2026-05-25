@@ -12,7 +12,7 @@ const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 
 const SHIPPING_FREE_MINIMUM = 400000
 const SHIPPING_COST = 15000
-const TAX_RATE = 0.19
+const TAX_RATE = 0
 
 export default function Checkout() {
   const navigate = useNavigate()
@@ -90,7 +90,7 @@ export default function Checkout() {
   const subtotal = total
   const shippingCost = subtotal >= SHIPPING_FREE_MINIMUM ? 0 : SHIPPING_COST
   const discount = 0
-  const tax = Math.round((subtotal - discount) * TAX_RATE)
+  const tax = 0
   const grandTotal = subtotal + shippingCost + tax - discount
 
   const summary = {
@@ -370,10 +370,7 @@ export default function Checkout() {
                   <span>-{formatPrice(summary.discount)}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span className="text-gray-500">IVA (19%)</span>
-                <span className="font-medium text-carbon">{formatPrice(summary.tax)}</span>
-              </div>
+
               <div className="border-t border-gray-100 pt-3 flex justify-between">
                 <span className="font-semibold text-carbon">Total</span>
                 <span className="font-bold text-lg text-carbon">{formatPrice(summary.total)}</span>

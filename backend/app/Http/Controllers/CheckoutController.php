@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 class CheckoutController extends Controller
 {
     private const SHIPPING_FREE_MINIMUM = 400000;
-    private const TAX_PERCENTAGE = 19;
+    private const TAX_PERCENTAGE = 0;
 
     public function __construct(
         private readonly WompiService $wompi

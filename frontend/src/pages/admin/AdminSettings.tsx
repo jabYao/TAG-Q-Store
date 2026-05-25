@@ -45,7 +45,6 @@ export default function AdminSettings() {
     envio_gratis_minimo: { label: 'Envío gratis desde (COP)', type: 'number', help: 'Monto mínimo para envío gratis' },
     whatsapp_contacto: { label: 'WhatsApp de contacto', type: 'text', help: 'Número con código de país' },
     tienda_nombre: { label: 'Nombre de la tienda', type: 'text' },
-    impuesto_porcentaje: { label: 'IVA / Impuesto (%)', type: 'number', help: 'Porcentaje de impuesto aplicado' },
   }
 
   return (
