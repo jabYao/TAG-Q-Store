@@ -38,6 +38,7 @@ class OrderController extends Controller
                 'status' => $o->status,
                 'payment_method' => $o->payment_method,
                 'payment_status' => $o->payment_status,
+                'is_internal' => (bool) $o->is_internal,
                 'items_count' => $o->items->count(),
                 'created_at' => $o->created_at,
             ]),
@@ -72,6 +73,7 @@ class OrderController extends Controller
                 'status' => $order->status,
                 'payment_method' => $order->payment_method,
                 'payment_status' => $order->payment_status,
+                'is_internal' => (bool) $order->is_internal,
                 'notes' => $order->notes,
                 'items' => $order->items->map(fn($i) => [
                     'id' => $i->id,

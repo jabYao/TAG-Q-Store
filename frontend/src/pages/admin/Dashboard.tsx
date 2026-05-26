@@ -76,7 +76,10 @@ export default function Dashboard() {
             return (
               <Link key={o.id} to={`/admin/pedidos/${o.id}`} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors">
                 <div>
-                  <p className="text-sm font-medium text-carbon">{o.order_number}</p>
+                  <p className="text-sm font-medium text-carbon">
+                    {o.order_number}
+                    {o.is_internal && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">Interna</span>}
+                  </p>
                   <p className="text-xs text-gray-400">{o.items_count} producto(s) · {new Date(o.created_at).toLocaleDateString('es-CO')}</p>
                 </div>
                 <div className="text-right">

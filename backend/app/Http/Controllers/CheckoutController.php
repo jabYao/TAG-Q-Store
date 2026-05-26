@@ -175,6 +175,8 @@ class CheckoutController extends Controller
         $total = round($subtotal + $shippingCost + $tax - $discount, 2);
 
         // Create order
+        $isInternal = $user->hasRole('admin') || $user->hasRole('operador');
+
         $order = Order::create([
             'order_number' => 'TAG-' . strtoupper(Str::random(8)),
             'user_id' => $user->id,
@@ -187,6 +189,7 @@ class CheckoutController extends Controller
             'status' => $validated['payment_method'] === 'contraentrega' ? 'contraentrega_pending' : 'pending',
             'payment_method' => $validated['payment_method'],
             'payment_status' => 'pending',
+            'is_internal' => $isInternal,
             'notes' => $validated['notes'] ?? null,
         ]);
 

@@ -80,7 +80,10 @@ export default function AdminOrders() {
               const st = statusLabels[o.status] ?? { label: o.status, color: 'bg-gray-100 text-gray-700' }
               return (
                 <tr key={o.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => window.location.href = `/admin/pedidos/${o.order_number}`}>
-                  <td className="px-4 py-3 font-medium text-carbon">{o.order_number}</td>
+                  <td className="px-4 py-3 font-medium text-carbon">
+                    {o.order_number}
+                    {o.is_internal && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">Interna</span>}
+                  </td>
                   <td className="px-4 py-3 text-gray-500">{o.customer}</td>
                   <td className="px-4 py-3 text-xs text-gray-400">{o.payment_method === 'wompi' ? '💳' : '💰'} {o.payment_method}</td>
                   <td className="px-4 py-3 text-center"><span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st.color}`}>{st.label}</span></td>

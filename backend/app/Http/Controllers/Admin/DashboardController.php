@@ -15,15 +15,19 @@ class DashboardController extends Controller
         $now = now();
         $startOfMonth = $now->copy()->startOfMonth();
 
-        $ordersThisMonth = Order::where('created_at', '>=', $startOfMonth)->count();
-        $revenueThisMonth = Order::where('created_at', '>=', $startOfMonth)
+        // KPIs excluyen órdenes internas (admin/operador comprando)
+        $ordersThisMonth = Order::where('is_internal', false)
+            ->where('created_at', '>=', $startOfMonth)
+            ->count();
+        $revenueThisMonth = Order::where('is_internal', false)
+            ->where('created_at', '>=', $startOfMonth)
             ->whereIn('status', ['paid', 'delivered'])
             ->sum('total');
 
         $pendingOrders = Order::whereIn('status', ['pending', 'contraentrega_pending'])->count();
         $recentOrders = Order::with('items')
             ->latest()
-            ->take(5)
+            ->take(10)
             ->get();
 
         $lowStockProducts = Product::whereColumn('stock', '<=', 'min_stock')
@@ -33,7 +37,7 @@ class DashboardController extends Controller
         return response()->json([
             'data' => [
                 'total_products' => Product::where('is_active', true)->count(),
-                'total_orders' => Order::count(),
+                'total_orders' => Order::where('is_internal', false)->count(),
                 'total_customers' => User::role('cliente')->count(),
                 'orders_this_month' => $ordersThisMonth,
                 'revenue_this_month' => (float) $revenueThisMonth,
@@ -44,6 +48,7 @@ class DashboardController extends Controller
                     'order_number' => $o->order_number,
                     'total' => (float) $o->total,
                     'status' => $o->status,
+                    'is_internal' => (bool) $o->is_internal,
                     'items_count' => $o->items->count(),
                     'created_at' => $o->created_at,
                 ]),

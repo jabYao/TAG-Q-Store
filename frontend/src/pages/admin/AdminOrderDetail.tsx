@@ -59,7 +59,10 @@ export default function AdminOrderDetail() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-carbon">{order.order_number}</h1>
+          <h1 className="text-2xl font-bold text-carbon">
+            {order.order_number}
+            {order.is_internal && <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">Interna</span>}
+          </h1>
           <p className="text-sm text-gray-400 mt-1">{new Date(order.created_at).toLocaleString('es-CO')}</p>
         </div>
         <span className={`text-xs px-3 py-1 rounded-full font-medium ${
