@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
-import { fetchProduct, createProduct, updateProduct, fetchBrands, fetchCategories } from '@/api'
+import { fetchProductForEdit, createProduct, updateProduct, fetchBrands, fetchCategories } from '@/api'
 import type { ProductFormData, BrandData, CategoryData } from '@/api'
 import { toast } from '@/stores/toastStore'
 
@@ -14,7 +14,7 @@ export default function AdminProductForm() {
 
   const { data: product } = useQuery({
     queryKey: ['product', 'edit', id],
-    queryFn: () => fetchProduct(id!),
+    queryFn: () => fetchProductForEdit(Number(id!)),
     enabled: isEditing,
   })
 
@@ -68,9 +68,11 @@ export default function AdminProductForm() {
   const removeSpec = (i: number) => setSpecEntries(prev => prev.filter((_, idx) => idx !== i))
   const loadDefaultSpecs = () => setSpecEntries(defaultSpecFields.map(k => ({ key: k, value: '' })))
   const [mainImage, setMainImage] = useState<string | null>(null)
-  const [gallery, setGallery] = useState<string[]>([])
+  const [gallery, setGallery] = useState<{ id: number | null; url: string }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const [uploadingMainImage, setUploadingMainImage] = useState(false)
+  const [uploadingGallery, setUploadingGallery] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -98,7 +100,12 @@ export default function AdminProductForm() {
         setMainImage(product.primary_image)
       }
       if (product.images?.length) {
-        setGallery(product.images.filter(i => i.type === 'gallery').map(i => i.url))
+        const seen = new Set<string>()
+        const items = product.images
+          .filter(i => i.type === 'gallery')
+          .filter(i => { const dup = seen.has(i.url); seen.add(i.url); return !dup })
+          .map(i => ({ id: i.id, url: i.url }))
+        setGallery(items)
       }
     }
   }, [product])
@@ -117,6 +124,11 @@ export default function AdminProductForm() {
       if (mainImage) {
         payload.primary_image = mainImage
       }
+      // Al crear: enviar URLs de galería acumuladas
+      // Al editar: las imágenes ya se guardaron en BD al subirse (con product_id)
+      if (!isEditing && gallery.length > 0) {
+        payload.gallery = gallery.map(img => img.url)
+      }
 
       if (isEditing) {
         await updateProduct(Number(id), payload)
@@ -127,6 +139,7 @@ export default function AdminProductForm() {
       }
 
       queryClient.invalidateQueries({ queryKey: ['admin', 'products'] })
+      queryClient.invalidateQueries({ queryKey: ['product', 'edit', id] })
       navigate('/admin/productos')
     } catch (err: any) {
       if (err instanceof SyntaxError) {
@@ -208,13 +221,53 @@ export default function AdminProductForm() {
             <div className="lg:col-span-2 bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
               <h2 className="text-sm font-semibold text-carbon mb-3 uppercase tracking-wide">Galería de imágenes</h2>
               <p className="text-xs text-gray-400 mb-4">Imágenes secundarias que se muestran en el detalle del producto.</p>
+
+              <input ref={galleryInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || [])
+                  if (!files.length) return
+                  setUploadingGallery(true)
+                  try {
+                    const urls: { id: number | null; url: string }[] = []
+                    for (const file of files) {
+                      const formData = new FormData()
+                      formData.append('image', file)
+                      // Si estamos editando, pasar product_id para guardar en BD al instante
+                      if (isEditing) {
+                        formData.append('product_id', id!)
+                      }
+                      const { data } = await api.post('/admin/imagenes/producto', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                        timeout: 30000,
+                      })
+                      urls.push({ id: data.data.id ?? null, url: data.data.url })
+                    }
+                    setGallery(prev => [...prev, ...urls])
+                    toast.success(`✅ ${files.length} imagen(es) subida(s)`)
+                  } catch (err: any) {
+                    const msg = err?.response?.data?.message || err?.message || 'Error al subir imágenes'
+                    toast.error('❌ ' + msg)
+                  } finally {
+                    setUploadingGallery(false)
+                    e.target.value = ''
+                  }
+                }} />
+
               {gallery.length > 0 ? (
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {gallery.map((img, i) => (
-                    <div key={i} className="group relative aspect-square bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    <div key={img.id ?? `new-${i}`} className="group relative aspect-square bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+                      <img src={img.url} alt="" className="w-full h-full object-cover" />
                       <span className="absolute top-1 left-1 w-5 h-5 bg-primary/80 text-white rounded-full text-[10px] flex items-center justify-center font-bold">{i + 1}</span>
-                      <button type="button" onClick={() => setGallery(prev => prev.filter((_, idx) => idx !== i))}
+                      <button type="button" onClick={async () => {
+                        // Si tiene ID en BD, borrar del servidor
+                        if (img.id) {
+                          try {
+                            await api.delete(`/admin/imagenes/producto/${img.id}`)
+                          } catch { /* ignora error silenciosamente */ }
+                        }
+                        setGallery(prev => prev.filter((_, idx) => idx !== i))
+                      }}
                         className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                     </div>
                   ))}
@@ -222,9 +275,20 @@ export default function AdminProductForm() {
               ) : (
                 <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center text-gray-400">
                   <span className="text-3xl">🖼️</span>
-                  <p className="text-xs mt-2">Las imágenes se gestionan desde la sección de imágenes</p>
+                  <p className="text-xs mt-2">Hacé click en "Subir imágenes" para agregar fotos del producto.</p>
                 </div>
               )}
+
+              <div className="mt-4 flex items-center gap-3">
+                <button type="button" onClick={() => galleryInputRef.current?.click()}
+                  disabled={uploadingGallery}
+                  className="text-xs px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50">
+                  {uploadingGallery ? 'Subiendo...' : '+ Subir imágenes'}
+                </button>
+                {gallery.length > 0 && (
+                  <span className="text-xs text-gray-400">{gallery.length} imagen(es)</span>
+                )}
+              </div>
             </div>
           </div>
 

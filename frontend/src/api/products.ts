@@ -100,6 +100,11 @@ export async function fetchProduct(slug: string): Promise<ProductData> {
   return data.data
 }
 
+export async function fetchProductForEdit(id: number): Promise<ProductData> {
+  const { data } = await api.get<{ data: ProductData }>(`/admin/productos/${id}`)
+  return data.data
+}
+
 export interface ProductFormData {
   brand_id?: number | null
   category_id?: number | null

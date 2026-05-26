@@ -96,17 +96,13 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function show(string $slug): JsonResponse
     {
-        $data = Cache::remember("product.slug.{$slug}", 300, function () use ($slug) {
-            $product = Product::active()->published()
-                ->with(['brand', 'category', 'images' => fn($q) => $q->ordered()])
-                ->where('slug', $slug)
-                ->firstOrFail();
-
-            return ProductResource::make($product)->toArray(request());
-        });
+        $product = Product::active()->published()
+            ->with(['brand', 'category', 'primaryImage', 'images' => fn($q) => $q->ordered()])
+            ->where('slug', $slug)
+            ->firstOrFail();
 
         return response()->json([
-            'data' => $data,
+            'data' => ProductResource::make($product),
         ]);
     }
 
@@ -135,23 +131,44 @@ class ProductController extends Controller implements HasMiddleware
             'specs' => 'nullable|array',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'primary_image' => 'nullable|string|max:500',
+            'primary_image' => 'nullable|string|max:2000',
+            'gallery' => 'nullable|array',
+            'gallery.*' => 'string|max:2000',
         ]);
 
         $product = Product::create($validated);
 
         // Crear imagen principal si se envió una URL
         if (!empty($validated['primary_image'])) {
+            // Limpiar transformaciones acumuladas (ej: q_auto:best,f_auto,w_800 repetido)
+            $cleanUrl = preg_replace('#(/upload/)(?:q_[^/]*(?:,[^/]*)*/)+#', '/upload/', $validated['primary_image']);
             $product->images()->create([
-                'cloudinary_url' => $validated['primary_image'],
+                'cloudinary_url' => $cleanUrl,
                 'is_primary' => true,
                 'sort_order' => 0,
                 'type' => 'gallery',
             ]);
         }
 
+        // Crear imágenes de galería (sin duplicados)
+        if (!empty($validated['gallery'])) {
+            $existingUrls = $product->images()->pluck('cloudinary_url');
+            $newIndex = 0;
+            foreach ($validated['gallery'] as $index => $url) {
+                if ($existingUrls->contains($url)) continue;
+                $cleanUrl = preg_replace('#(/upload/)(?:q_[^/]*(?:,[^/]*)*/)+#', '/upload/', $url);
+                $product->images()->create([
+                    'cloudinary_url' => $cleanUrl,
+                    'is_primary' => false,
+                    'sort_order' => $index + 1,
+                    'type' => 'gallery',
+                ]);
+                $newIndex++;
+            }
+        }
+
         return response()->json([
-            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage'])),
+            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage', 'images'])),
         ], 201);
     }
 
@@ -180,19 +197,23 @@ class ProductController extends Controller implements HasMiddleware
             'specs' => 'nullable|array',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'primary_image' => 'nullable|string|max:500',
+            'primary_image' => 'nullable|string|max:2000',
+            'gallery' => 'nullable|array',
+            'gallery.*' => 'string|max:2000',
         ]);
 
         $product->update($validated);
 
         // Actualizar o crear imagen principal
         if (!empty($validated['primary_image'])) {
+            // Limpiar transformaciones acumuladas
+            $cleanUrl = preg_replace('#(/upload/)(?:q_[^/]*(?:,[^/]*)*/)+#', '/upload/', $validated['primary_image']);
             $existing = $product->primaryImage;
             if ($existing) {
-                $existing->update(['cloudinary_url' => $validated['primary_image']]);
+                $existing->update(['cloudinary_url' => $cleanUrl]);
             } else {
                 $product->images()->create([
-                    'cloudinary_url' => $validated['primary_image'],
+                    'cloudinary_url' => $cleanUrl,
                     'is_primary' => true,
                     'sort_order' => 0,
                     'type' => 'gallery',
@@ -200,10 +221,28 @@ class ProductController extends Controller implements HasMiddleware
             }
         }
 
+        // Agregar nuevas imágenes de galería (sin duplicados)
+        if (!empty($validated['gallery'])) {
+            $existingUrls = $product->images()->pluck('cloudinary_url');
+            $maxSort = $product->images()->max('sort_order') ?? 0;
+            $newIndex = 0;
+            foreach ($validated['gallery'] as $index => $url) {
+                if ($existingUrls->contains($url)) continue;
+                $cleanUrl = preg_replace('#(/upload/)(?:q_[^/]*(?:,[^/]*)*/)+#', '/upload/', $url);
+                $product->images()->create([
+                    'cloudinary_url' => $cleanUrl,
+                    'is_primary' => false,
+                    'sort_order' => $maxSort + $newIndex + 1,
+                    'type' => 'gallery',
+                ]);
+                $newIndex++;
+            }
+        }
+
         Cache::forget("product.slug.{$product->slug}");
 
         return response()->json([
-            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage'])),
+            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage', 'images'])),
         ]);
     }
 
@@ -217,5 +256,17 @@ class ProductController extends Controller implements HasMiddleware
         Cache::forget("product.slug.{$product->slug}");
 
         return response()->json(['message' => 'Producto eliminado correctamente.']);
+    }
+
+    /**
+     * Mostrar producto para edición (admin).
+     */
+    public function adminShow(Product $product): JsonResponse
+    {
+        $product->load(['brand', 'category', 'primaryImage', 'images']);
+
+        return response()->json([
+            'data' => ProductResource::make($product),
+        ]);
     }
 }
