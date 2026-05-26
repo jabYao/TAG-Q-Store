@@ -40,6 +40,10 @@ class ProductResource extends JsonResource
             'meta_description' => $this->meta_description,
             'published_at' => $this->published_at,
             'created_at' => $this->created_at,
+            'min_stock' => $this->min_stock ?? 5,
+            'is_active' => $this->is_active ?? true,
+            'brand_id' => $this->brand_id,
+            'category_id' => $this->category_id,
         ];
     }
 }

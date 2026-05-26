@@ -140,6 +140,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
         return response()->json(['message' => 'Configuración actualizada.']);
     });
 
+    Route::get('/productos/{product}', [ProductController::class, 'adminShow']);
     Route::post('/productos', [ProductController::class, 'store']);
     Route::put('/productos/{product}', [ProductController::class, 'update']);
     Route::delete('/productos/{product}', [ProductController::class, 'destroy']);

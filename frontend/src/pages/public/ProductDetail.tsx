@@ -6,6 +6,7 @@ import ProductCard from '@/components/ProductCard'
 import SEO from '@/components/SEO'
 import { DetailSkeleton } from '@/components/Skeleton'
 import { toast } from '@/stores/toastStore'
+import Button from '@/components/ui/Button'
 
 function QuantitySelector({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
@@ -33,10 +34,10 @@ export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const [selectedImage, setSelectedImage] = useState(0)
-  const [selectedColor, setSelectedColor] = useState('')
-  const [selectedSize, setSelectedSize] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState(0)
+  const [zoom, setZoom] = useState({ show: false, x: 50, y: 50 })
+  const [mainImageError, setMainImageError] = useState(false)
 
   const { data: product, isLoading, isError } = useQuery({
     queryKey: ['product', slug],
@@ -69,6 +70,33 @@ export default function ProductDetail() {
     })
   }
 
+  // ── Valores calculados (después del chequeo de loading/error, product existe) ──
+  let discount = 0
+  let images: any[] = []
+  let specsEntries: [string, string][] = []
+  let details: { label: string; value: string }[] = []
+
+  if (product) {
+    discount = product.original_price
+      ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+      : 0
+
+    images = product.images?.length
+      ? product.images
+      : [{ url: null, alt_text: null, is_primary: true, sort_order: 0, type: 'product', id: 0 }]
+
+    specsEntries = product.specs ? Object.entries(product.specs) : []
+
+    details = [
+      ...(product.brand ? [{ label: 'Marca', value: product.brand.name }] : []),
+      { label: 'SKU', value: product.sku },
+      ...(product.gender ? [{ label: 'Género', value: product.gender === 'male' ? 'Masculino' : product.gender === 'female' ? 'Femenino' : 'Unisex' }] : []),
+      ...(product.movement ? [{ label: 'Movimiento', value: product.movement }] : []),
+      ...(product.specs?.garantia ? [{ label: 'Garantía', value: product.specs.garantia }] : []),
+      ...(product.specs?.origen ? [{ label: 'Origen', value: product.specs.origen }] : []),
+    ]
+  }
+
   if (isLoading) {
     return (
       <>
@@ -93,25 +121,6 @@ export default function ProductDetail() {
     </>
     )
   }
-
-  const discount = product.original_price
-    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
-    : 0
-
-  const images = product.images?.length
-    ? product.images
-    : [{ url: null, alt_text: null, is_primary: true, sort_order: 0, type: 'product', id: 0 }]
-
-  const specsEntries = product.specs ? Object.entries(product.specs) : []
-
-  const details = [
-    ...(product.brand ? [{ label: 'Marca', value: product.brand.name }] : []),
-    { label: 'SKU', value: product.sku },
-    ...(product.gender ? [{ label: 'Género', value: product.gender === 'male' ? 'Masculino' : product.gender === 'female' ? 'Femenino' : 'Unisex' }] : []),
-    ...(product.movement ? [{ label: 'Movimiento', value: product.movement }] : []),
-    ...(product.specs?.garantia ? [{ label: 'Garantía', value: product.specs.garantia }] : []),
-    ...(product.specs?.origen ? [{ label: 'Origen', value: product.specs.origen }] : []),
-  ]
 
   return (
     <>
@@ -140,12 +149,27 @@ export default function ProductDetail() {
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
           {/* Gallery */}
           <div className="w-full lg:w-[55%]">
-            <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl flex items-center justify-center border border-gray-100 mb-4 overflow-hidden">
-              {images[selectedImage]?.url ? (
+            <div
+              className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl flex items-center justify-center border border-gray-100 mb-4 overflow-hidden cursor-crosshair relative"
+              onMouseMove={(e) => {
+                if (!images[selectedImage]?.url) return
+                const rect = e.currentTarget.getBoundingClientRect()
+                const x = ((e.clientX - rect.left) / rect.width) * 100
+                const y = ((e.clientY - rect.top) / rect.height) * 100
+                setZoom({ show: true, x, y })
+              }}
+              onMouseLeave={() => setZoom(z => ({ ...z, show: false }))}
+            >
+              {images[selectedImage]?.url && !mainImageError ? (
                 <img
                   src={images[selectedImage].url}
                   alt={images[selectedImage].alt_text ?? product.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-75"
+                  style={{
+                    transform: zoom.show ? 'scale(2)' : 'scale(1)',
+                    transformOrigin: `${zoom.x}% ${zoom.y}%`,
+                  }}
+                  onError={() => setMainImageError(true)}
                 />
               ) : (
                 <span className="text-8xl md:text-9xl">⌚</span>
@@ -157,7 +181,7 @@ export default function ProductDetail() {
                 {images.map((img, i) => (
                   <button
                     key={i}
-                    onClick={() => setSelectedImage(i)}
+                    onClick={() => { setSelectedImage(i); setMainImageError(false) }}
                     className={`w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 flex items-center justify-center bg-gray-50 overflow-hidden transition-all ${
                       i === selectedImage
                         ? 'border-primary'
@@ -165,7 +189,7 @@ export default function ProductDetail() {
                     }`}
                   >
                     {img.url ? (
-                      <img src={img.url} alt="" className="w-full h-full object-cover" />
+                      <img src={img.url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     ) : (
                       <span className="text-2xl">⌚</span>
                     )}
@@ -187,19 +211,13 @@ export default function ProductDetail() {
               {product.name}
             </h1>
 
-            {/* Rating placeholder */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex text-gold text-sm">★★★★★</div>
-              <span className="text-xs text-gray-400">(0 reseñas)</span>
-            </div>
-
             {/* Price */}
             <div className="flex items-baseline gap-3 mb-6">
               <span className="text-3xl font-bold text-carbon">{formatPrice(product.price)}</span>
               {product.original_price && (
                 <>
                   <span className="text-lg text-gray-400 line-through">{formatPrice(product.original_price)}</span>
-                  <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">-{discount}%</span>
+                  <span className="text-xs font-bold text-carbon bg-gold px-2 py-0.5 rounded">-{discount}%</span>
                 </>
               )}
             </div>
@@ -220,70 +238,31 @@ export default function ProductDetail() {
               <p className="text-sm text-gray-500 leading-relaxed mb-6">{product.short_description}</p>
             )}
 
-            {/* Colors */}
-            {product.specs?.color_esfera && (
-              <div className="mb-5">
-                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Color: <span className="font-medium text-carbon">{selectedColor || product.specs.color_esfera}</span></p>
-                <div className="flex gap-2">
-                  {[product.specs.color_esfera, product.specs.correa_color].filter(Boolean).map((color, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setSelectedColor(color!)}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        selectedColor === color || (!selectedColor && i === 0)
-                          ? 'border-primary scale-110'
-                          : 'border-gray-200'
-                      }`}
-                      style={{ backgroundColor: color === 'Plateado' ? '#C0C0C0' : color === 'Azul' ? '#0B2977' : color === 'Negro' ? '#1A1A1A' : color === 'Blanco' ? '#FFFFFF' : color === 'Dorado' ? '#D4AF37' : color === 'Marrón' ? '#6B3A2A' : '#999' }}
-                      title={color!}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Size selector */}
-            {product.specs?.tamano_caja && (
-              <div className="mb-6">
-                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Tamaño: <span className="font-medium text-carbon">{selectedSize || product.specs.tamano_caja}</span></p>
-                <div className="flex gap-2 flex-wrap">
-                  {['36mm', '38mm', '40mm', '42mm'].map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`px-3 py-1.5 text-xs rounded-lg border transition-all ${
-                        selectedSize === size
-                          ? 'bg-primary text-white border-primary'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Quantity + Add to cart */}
             <div className="flex items-center gap-4 mb-6">
               <QuantitySelector value={quantity} onChange={setQuantity} />
-              <button
+              <Button
+                variant="primary"
+                size="md"
+                disabled={product.is_out_of_stock}
+                loading={addToCartMutation.isPending}
                 onClick={() => addToCartMutation.mutate()}
-                disabled={product.is_out_of_stock || addToCartMutation.isPending}
-                className="flex-1 bg-primary text-white px-6 py-3 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1"
               >
-                {addToCartMutation.isPending ? 'AGREGANDO...' : product.is_out_of_stock ? 'AGOTADO' : 'AGREGAR AL CARRITO'}
-              </button>
+                {product.is_out_of_stock ? 'AGOTADO' : 'AGREGAR AL CARRITO'}
+              </Button>
             </div>
 
             {/* Buy now */}
             {!product.is_out_of_stock && (
-              <button
+              <Button
+                variant="outline"
+                size="md"
                 onClick={handleBuyNow}
-                className="w-full border-2 border-primary text-primary px-6 py-3 rounded-lg font-semibold text-sm hover:bg-primary hover:text-white transition-all duration-200 mb-6"
+                className="w-full mb-6"
               >
                 COMPRAR AHORA
-              </button>
+              </Button>
             )}
 
             {/* Shipping info */}
