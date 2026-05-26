@@ -76,7 +76,15 @@ class ImageController extends Controller
      */
     public function destroyProductImage(ProductImage $productImage): JsonResponse
     {
-        $this->cloudinary->delete($productImage->cloudinary_public_id);
+        // Eliminar de Cloudinary solo si tenemos el public_id
+        if ($productImage->cloudinary_public_id) {
+            try {
+                $this->cloudinary->delete($productImage->cloudinary_public_id);
+            } catch (\Exception $e) {
+                // Log pero continuar — el registro debe eliminarse igual
+            }
+        }
+
         $productImage->delete();
 
         return response()->json(['message' => 'Imagen eliminada correctamente.']);
