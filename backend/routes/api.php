@@ -14,6 +14,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HeroController;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +64,9 @@ Route::get('/heroes', function () {
             ->get(['title', 'subtitle', 'cta_text', 'cta_link', 'image_url'])
     ]);
 });
+
+// ─── Contacto público ───
+Route::post('/contacto', [ContactController::class, 'store']);
 
 // ─── Settings públicos ───
 Route::get('/settings/contacto', function () {
