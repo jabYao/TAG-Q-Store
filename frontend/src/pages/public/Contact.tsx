@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import SEO from '@/components/SEO'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import api from '@/api/client'
 
 export default function Contact() {
   const [name, setName] = useState('')
@@ -9,9 +10,10 @@ export default function Contact() {
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
@@ -20,8 +22,16 @@ export default function Contact() {
       return
     }
 
-    // TODO: connect to backend
-    setSent(true)
+    setLoading(true)
+    try {
+      await api.post('/contacto', { name, email, phone, subject, message })
+      setSent(true)
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Error al enviar el mensaje. Intentá de nuevo.'
+      setError(msg)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -85,8 +95,9 @@ export default function Contact() {
                 <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={5} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-colors resize-none" placeholder="Escribí tu mensaje..." />
               </div>
 
-              <button type="submit" className="bg-primary text-white px-8 py-3 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-colors">
-                ENVIAR MENSAJE
+              <button type="submit" disabled={loading}
+                className="bg-primary text-white px-8 py-3 rounded-lg font-semibold text-sm hover:bg-primary-dark transition-colors disabled:opacity-50">
+                {loading ? 'ENVIANDO...' : 'ENVIAR MENSAJE'}
               </button>
             </form>
           )}

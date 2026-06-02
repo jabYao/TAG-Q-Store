@@ -25,8 +25,8 @@ class FilterController extends Controller
             'name' => 'required|string|max:100',
             'slug' => 'nullable|string|max:100|unique:filter_groups,slug',
             'display_type' => 'required|in:checkbox,radio',
-            'is_active' => 'boolean',
-            'sort_order' => 'integer|min:0',
+            'is_active' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $group = FilterGroup::create($validated);
@@ -40,8 +40,8 @@ class FilterController extends Controller
             'name' => 'sometimes|string|max:100',
             'slug' => 'sometimes|string|max:100|unique:filter_groups,slug,' . $filterGroup->id,
             'display_type' => 'sometimes|in:checkbox,radio',
-            'is_active' => 'boolean',
-            'sort_order' => 'integer|min:0',
+            'is_active' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $filterGroup->update($validated);
@@ -64,8 +64,8 @@ class FilterController extends Controller
             'filter_group_id' => 'required|exists:filter_groups,id',
             'value' => 'required|string|max:100',
             'slug' => 'nullable|string|max:100|unique:filter_values,slug',
-            'is_active' => 'boolean',
-            'sort_order' => 'integer|min:0',
+            'is_active' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $value = FilterValue::create($validated);
@@ -79,8 +79,8 @@ class FilterController extends Controller
             'filter_group_id' => 'sometimes|exists:filter_groups,id',
             'value' => 'sometimes|string|max:100',
             'slug' => 'sometimes|string|max:100|unique:filter_values,slug,' . $filterValue->id,
-            'is_active' => 'boolean',
-            'sort_order' => 'integer|min:0',
+            'is_active' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $filterValue->update($validated);

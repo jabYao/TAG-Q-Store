@@ -20,7 +20,7 @@ class ColorController extends Controller
             'name' => 'required|string|max:50',
             'slug' => 'nullable|string|max:50|unique:colors,slug',
             'hex' => 'required|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
-            'sort_order' => 'integer|min:0',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $color = Color::create($validated);
@@ -34,7 +34,7 @@ class ColorController extends Controller
             'name' => 'sometimes|string|max:50',
             'slug' => 'sometimes|string|max:50|unique:colors,slug,' . $color->id,
             'hex' => 'sometimes|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
-            'sort_order' => 'integer|min:0',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $color->update($validated);

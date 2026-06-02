@@ -208,6 +208,11 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::put('/heroes/{hero}', [HeroController::class, 'update']);
     Route::delete('/heroes/{hero}', [HeroController::class, 'destroy']);
 
+    // Contacto (admin)
+    Route::get('/contacto', [ContactController::class, 'index']);
+    Route::put('/contacto/{contactMessage}/leer', [ContactController::class, 'markRead']);
+    Route::delete('/contacto/{contactMessage}', [ContactController::class, 'destroy']);
+
     // Image management
     Route::post('/imagenes/producto', [ImageController::class, 'uploadProductImage']);
     Route::delete('/imagenes/producto/{productImage}', [ImageController::class, 'destroyProductImage']);

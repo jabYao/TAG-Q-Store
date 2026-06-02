@@ -48,6 +48,7 @@ const AdminClients = lazy(() => import('@/pages/admin/AdminClients'))
 const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'))
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'))
 const AdminLogs = lazy(() => import('@/pages/admin/AdminLogs'))
+const AdminContactMessages = lazy(() => import('@/pages/admin/AdminContactMessages'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -130,6 +131,7 @@ export default function AppRouter() {
             <Route path="roles" element={<AdminRoles />} />
             <Route path="configuracion" element={<AdminSettings />} />
             <Route path="logs" element={<AdminLogs />} />
+            <Route path="mensajes" element={<AdminContactMessages />} />
             </Route>
           </Route>
         </Routes>

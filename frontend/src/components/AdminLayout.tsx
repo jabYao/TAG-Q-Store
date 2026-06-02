@@ -10,6 +10,7 @@ const navItems = [
   { label: 'Banners', href: '/admin/imagenes', icon: '🖼️' },
   { label: 'Pedidos', href: '/admin/pedidos', icon: '📋' },
   { label: 'Clientes', href: '/admin/clientes', icon: '👥' },
+  { label: 'Mensajes', href: '/admin/mensajes', icon: '✉️' },
   { label: 'Roles y Permisos', href: '/admin/roles', icon: '🔐' },
   { label: 'Configuración', href: '/admin/configuracion', icon: '⚙️' },
   { label: 'Logs', href: '/admin/logs', icon: '📝' },
