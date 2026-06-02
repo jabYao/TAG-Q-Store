@@ -43,6 +43,17 @@ Métodos disponibles:
 | `getUrl($publicId, $transformations)` | URL optimizada con transformaciones |
 | `getThumbnailUrl($publicId, $width, $height)` | Thumbnail crop automático |
 
+## Estructura de carpetas en Cloudinary
+
+Las imágenes se organizan en carpetas dentro de `tag-q/` según su tipo:
+
+| Tipo | Carpeta | Endpoint de subida |
+|------|---------|-------------------|
+| Producto | `tag-q/producto` (plana) | `POST /api/admin/imagenes/producto` |
+| Banner | `tag-q/banner` | `POST /api/admin/imagenes/banner` |
+| Hero | `tag-q/hero` | `POST /api/admin/imagenes/hero` |
+| Promoción | `tag-q/promociones` | `POST /api/admin/imagenes/promocion` |
+
 ### Transformaciones por defecto
 
 - `quality: auto:best` — calidad óptima según dispositivo/red
@@ -77,6 +88,8 @@ Admin sube imagen → ImageController@uploadProductImage
 | DELETE | `/api/admin/imagenes/producto/{id}` | Eliminar imagen |
 | PUT | `/api/admin/imagenes/reordenar` | Reordenar imágenes de un producto |
 | POST | `/api/admin/imagenes/banner` | Subir imagen de banner |
+| POST | `/api/admin/imagenes/hero` | Subir imagen de hero |
+| POST | `/api/admin/imagenes/promocion` | Subir imagen de promoción |
 
 ### Request/Response ejemplos
 
@@ -96,8 +109,8 @@ alt_text: "Tommy Hilfiger Chronograph - Vista frontal"
 {
   "data": {
     "id": 1,
-    "url": "https://res.cloudinary.com/dg6iut6sl/image/upload/v123/tag-q/products/1/abc123.jpg",
-    "public_id": "tag-q/products/1/abc123",
+    "url": "https://res.cloudinary.com/dg6iut6sl/image/upload/v123/tag-q/producto/abc123.jpg",
+    "public_id": "tag-q/producto/abc123",
     "alt_text": "Tommy Hilfiger Chronograph - Vista frontal",
     "is_primary": true,
     "sort_order": 0

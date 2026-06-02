@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
+import { uploadHeroImage } from '@/api/images'
 import { toast } from '@/stores/toastStore'
 
 interface HeroData {
@@ -86,15 +87,8 @@ export default function AdminHeroes() {
   const handleImageUpload = async (heroId: number, file: File) => {
     setUploadingHeroId(heroId)
     try {
-      const formData = new FormData()
-      formData.append('image', file)
-
-      const { data } = await api.post('/admin/imagenes/banner', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 30000,
-      })
-
-      await api.put(`/admin/heroes/${heroId}`, { image_url: data.data.url })
+      const result = await uploadHeroImage(file)
+      await api.put(`/admin/heroes/${heroId}`, { image_url: result.url })
 
       queryClient.invalidateQueries({ queryKey: ['heroes'] })
       toast.success('✅ Imagen subida correctamente')

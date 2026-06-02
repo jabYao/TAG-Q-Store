@@ -10,16 +10,24 @@ export interface ImageUploadResult {
 }
 
 export async function uploadProductImage(
-  productId: number,
   file: File,
-  isPrimary = false,
-  altText?: string,
+  options?: {
+    productId?: number
+    isPrimary?: boolean
+    altText?: string
+  },
 ): Promise<ImageUploadResult> {
   const formData = new FormData()
-  formData.append('product_id', String(productId))
   formData.append('image', file)
-  formData.append('is_primary', String(isPrimary))
-  if (altText) formData.append('alt_text', altText)
+  if (options?.productId !== undefined) {
+    formData.append('product_id', String(options.productId))
+  }
+  if (options?.isPrimary) {
+    formData.append('is_primary', 'true')
+  }
+  if (options?.altText) {
+    formData.append('alt_text', options.altText)
+  }
 
   const { data } = await api.post<{ data: ImageUploadResult }>('/admin/imagenes/producto', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -45,6 +53,26 @@ export async function uploadBannerImage(file: File): Promise<ImageUploadResult> 
   formData.append('image', file)
 
   const { data } = await api.post<{ data: ImageUploadResult }>('/admin/imagenes/banner', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data.data
+}
+
+export async function uploadHeroImage(file: File): Promise<ImageUploadResult> {
+  const formData = new FormData()
+  formData.append('image', file)
+
+  const { data } = await api.post<{ data: ImageUploadResult }>('/admin/imagenes/hero', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data.data
+}
+
+export async function uploadPromotionImage(file: File): Promise<ImageUploadResult> {
+  const formData = new FormData()
+  formData.append('image', file)
+
+  const { data } = await api.post<{ data: ImageUploadResult }>('/admin/imagenes/promocion', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
   return data.data

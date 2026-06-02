@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { fetchProduct, fetchProducts, addToCart } from '@/api'
 import ProductCard from '@/components/ProductCard'
@@ -133,15 +134,12 @@ export default function ProductDetail() {
         publishedAt={product.published_at}
       />
       <div>
-      {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 lg:px-6 pt-4 pb-2">
-        <nav className="text-xs text-gray-400">
-          <Link to="/" className="hover:text-primary">Home</Link>
-          <span className="mx-1">/</span>
-          <Link to="/catalogo" className="hover:text-primary">Catálogo</Link>
-          <span className="mx-1">/</span>
-          <span className="text-carbon">{product.name}</span>
-        </nav>
+        <Breadcrumbs items={[
+          { label: 'Home', href: '/' },
+          { label: 'Catálogo', href: '/catalogo' },
+          { label: product.name },
+        ]} />
       </div>
 
       {/* Main section */}

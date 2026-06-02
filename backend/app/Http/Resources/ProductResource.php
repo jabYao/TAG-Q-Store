@@ -44,6 +44,22 @@ class ProductResource extends JsonResource
             'is_active' => $this->is_active ?? true,
             'brand_id' => $this->brand_id,
             'category_id' => $this->category_id,
+            'filter_values' => $this->whenLoaded('filterValues', function () {
+                return $this->filterValues->map(fn ($v) => [
+                    'id' => $v->id,
+                    'filter_group_id' => $v->filter_group_id,
+                    'value' => $v->value,
+                    'slug' => $v->slug,
+                ]);
+            }),
+            'colors' => $this->whenLoaded('colors', function () {
+                return $this->colors->map(fn ($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'slug' => $c->slug,
+                    'hex' => $c->hex,
+                ]);
+            }),
         ];
     }
 }

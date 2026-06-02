@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import SEO from '@/components/SEO'
+import Breadcrumbs from '@/components/Breadcrumbs'
 
 export default function Contact() {
   const [name, setName] = useState('')
@@ -28,12 +28,10 @@ export default function Contact() {
     <>
       <SEO title="Contacto" description="Contactanos por WhatsApp, email o formulario. Estamos para ayudarte." url="/contacto" />
       <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
-      {/* Breadcrumb */}
-      <nav className="text-xs text-gray-400 mb-6">
-        <Link to="/" className="hover:text-primary">Home</Link>
-        <span className="mx-1">/</span>
-        <span className="text-carbon">Contacto</span>
-      </nav>
+      <Breadcrumbs items={[
+        { label: 'Home', href: '/' },
+        { label: 'Contacto' },
+      ]} />
 
       <div className="flex flex-col lg:flex-row gap-12">
         {/* Form */}

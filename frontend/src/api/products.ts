@@ -35,6 +35,20 @@ export interface ProductImageData {
   type: string
 }
 
+export interface FilterValueRef {
+  id: number
+  filter_group_id: number
+  value: string
+  slug: string
+}
+
+export interface ColorRef {
+  id: number
+  name: string
+  slug: string
+  hex: string
+}
+
 export interface ProductData {
   id: number
   name: string
@@ -56,6 +70,8 @@ export interface ProductData {
   category: CategoryData | null
   primary_image: string | null
   images: ProductImageData[]
+  filter_values?: FilterValueRef[]
+  colors?: ColorRef[]
   published_at: string
   created_at: string
 }
@@ -82,6 +98,8 @@ export interface ProductFilters {
   sort?: string
   page?: number
   per_page?: number
+  filter_values?: string
+  colors?: string
 }
 
 export async function fetchProducts(filters: ProductFilters = {}): Promise<ProductListResponse> {
@@ -98,6 +116,17 @@ export async function fetchProducts(filters: ProductFilters = {}): Promise<Produ
 export async function fetchProduct(slug: string): Promise<ProductData> {
   const { data } = await api.get<{ data: ProductData }>(`/productos/${slug}`)
   return data.data
+}
+
+export async function fetchAdminProducts(filters: ProductFilters = {}): Promise<ProductListResponse> {
+  const params = new URLSearchParams()
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '' && value !== null) {
+      params.set(key, String(value))
+    }
+  })
+  const { data } = await api.get<ProductListResponse>(`/admin/productos?${params.toString()}`)
+  return data
 }
 
 export async function fetchProductForEdit(id: number): Promise<ProductData> {

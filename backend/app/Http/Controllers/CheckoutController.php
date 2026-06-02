@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\OrderStatus;
 use App\Models\Payment;
 use App\Models\Setting;
+use App\Services\CloudinaryService;
 use App\Services\WompiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -53,7 +54,7 @@ class CheckoutController extends Controller
                     'slug' => $item->product->slug,
                     'price' => (float) $item->unit_price,
                     'quantity' => $item->quantity,
-                    'image_url' => $item->product->primaryImage?->cloudinary_url,
+                    'image_url' => CloudinaryService::optimizeUrl($item->product->primaryImage?->cloudinary_url, 200),
                     'total' => (float) ($item->unit_price * $item->quantity),
                 ]),
                 'subtotal' => $subtotal,

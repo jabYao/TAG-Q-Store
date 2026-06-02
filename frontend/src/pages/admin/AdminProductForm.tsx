@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
-import { fetchProductForEdit, createProduct, updateProduct, fetchBrands, fetchCategories } from '@/api'
-import type { ProductFormData, BrandData, CategoryData } from '@/api'
+import { uploadProductImage, deleteProductImage } from '@/api/images'
+import { fetchProductForEdit, createProduct, updateProduct, fetchBrands, fetchCategories, fetchAdminFilters, fetchAdminColors } from '@/api'
+import type { ProductFormData, BrandData, CategoryData, FilterGroupData } from '@/api'
+import type { ColorData } from '@/api/colors'
 import { toast } from '@/stores/toastStore'
 
 export default function AdminProductForm() {
@@ -28,6 +30,16 @@ export default function AdminProductForm() {
     queryFn: () => fetchCategories(),
   })
 
+  const { data: filterGroups } = useQuery({
+    queryKey: ['admin-filters'],
+    queryFn: fetchAdminFilters,
+  })
+
+  const { data: allColors } = useQuery({
+    queryKey: ['admin-colors'],
+    queryFn: fetchAdminColors,
+  })
+
   const [form, setForm] = useState<ProductFormData>({
     name: '',
     sku: '',
@@ -46,11 +58,15 @@ export default function AdminProductForm() {
     is_new: false,
     specs: {},
   })
+  const [filterValueIds, setFilterValueIds] = useState<number[]>([])
+  const [selectedColorIds, setSelectedColorIds] = useState<number[]>([])
+
+  // Specs that are NOT in the mandatory filter list (fill free-form)
   const defaultSpecFields = [
-    'estilo', 'grosor', 'origen', 'cristal', 'garantia', 'funciones',
-    'color_caja', 'forma_caja', 'tipo_reloj', 'tamano_caja', 'tipo_cierre',
-    'tipo_esfera', 'color_esfera', 'correa_color', 'material_caja',
-    'correa_material', 'resistencia_agua', 'modelo_referencia',
+    'estilo', 'material_caja', 'correa_material',
+    'tamano_caja', 'resistencia_agua', 'forma_caja',
+    'grosor', 'origen', 'cristal', 'garantia',
+    'tipo_cierre', 'tipo_esfera', 'modelo_referencia',
   ]
 
   const [specEntries, setSpecEntries] = useState<{ key: string; value: string }[]>([])
@@ -95,6 +111,14 @@ export default function AdminProductForm() {
         is_new: product.is_new,
         specs: product.specs ?? {},
       })
+      // Set filter value IDs from loaded product
+      if (product.filter_values?.length) {
+        setFilterValueIds(product.filter_values.map((fv: any) => fv.id))
+      }
+      // Set color IDs from loaded product
+      if (product.colors?.length) {
+        setSelectedColorIds(product.colors.map((c: any) => c.id))
+      }
       setSpecEntries(specsToEntries(product.specs))
       if (product.primary_image) {
         setMainImage(product.primary_image)
@@ -110,6 +134,22 @@ export default function AdminProductForm() {
     }
   }, [product])
 
+  const toggleFilterValue = (valueId: number) => {
+    setFilterValueIds(prev =>
+      prev.includes(valueId)
+        ? prev.filter(id => id !== valueId)
+        : [...prev, valueId]
+    )
+  }
+
+  const toggleColor = (colorId: number) => {
+    setSelectedColorIds(prev =>
+      prev.includes(colorId)
+        ? prev.filter(id => id !== colorId)
+        : [...prev, colorId]
+    )
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -120,6 +160,8 @@ export default function AdminProductForm() {
       const payload: Record<string, any> = {
         ...form,
         specs,
+        filter_value_ids: filterValueIds,
+        color_ids: selectedColorIds,
       }
       if (mainImage) {
         payload.primary_image = mainImage
@@ -175,13 +217,10 @@ export default function AdminProductForm() {
                   if (!file) return
                   setUploadingMainImage(true)
                   try {
-                    const formData = new FormData()
-                    formData.append('image', file)
-                    const { data } = await api.post('/admin/imagenes/producto', formData, {
-                      headers: { 'Content-Type': 'multipart/form-data' },
-                      timeout: 30000,
+                    const result = await uploadProductImage(file, {
+                      productId: isEditing ? Number(id) : undefined,
                     })
-                    setMainImage(data.data.url)
+                    setMainImage(result.url)
                     toast.success('✅ Imagen subida')
                   } catch (err: any) {
                     const msg = err?.response?.data?.message || err?.message || 'Error al subir imagen'
@@ -230,17 +269,10 @@ export default function AdminProductForm() {
                   try {
                     const urls: { id: number | null; url: string }[] = []
                     for (const file of files) {
-                      const formData = new FormData()
-                      formData.append('image', file)
-                      // Si estamos editando, pasar product_id para guardar en BD al instante
-                      if (isEditing) {
-                        formData.append('product_id', id!)
-                      }
-                      const { data } = await api.post('/admin/imagenes/producto', formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                        timeout: 30000,
+                      const result = await uploadProductImage(file, {
+                        productId: isEditing ? Number(id) : undefined,
                       })
-                      urls.push({ id: data.data.id ?? null, url: data.data.url })
+                      urls.push({ id: result.id ?? null, url: result.url })
                     }
                     setGallery(prev => [...prev, ...urls])
                     toast.success(`✅ ${files.length} imagen(es) subida(s)`)
@@ -260,10 +292,9 @@ export default function AdminProductForm() {
                       <img src={img.url} alt="" className="w-full h-full object-cover" />
                       <span className="absolute top-1 left-1 w-5 h-5 bg-primary/80 text-white rounded-full text-[10px] flex items-center justify-center font-bold">{i + 1}</span>
                       <button type="button" onClick={async () => {
-                        // Si tiene ID en BD, borrar del servidor
                         if (img.id) {
                           try {
-                            await api.delete(`/admin/imagenes/producto/${img.id}`)
+                            await deleteProductImage(img.id)
                           } catch { /* ignora error silenciosamente */ }
                         }
                         setGallery(prev => prev.filter((_, idx) => idx !== i))
@@ -352,33 +383,82 @@ export default function AdminProductForm() {
             </div>
           </div>
 
-          {/* Attributes */}
+          {/* Filter values from DB (replaces hardcoded gender/movement selects) */}
           <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <h2 className="text-sm font-semibold text-carbon mb-4 uppercase tracking-wide">Atributos</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs text-gray-400 mb-1 block">Género</label>
-                <select value={form.gender} onChange={e => update('gender', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="">Seleccionar</option>
-                  <option value="male">Masculino</option>
-                  <option value="female">Femenino</option>
-                  <option value="unisex">Unisex</option>
-                </select>
+            <h2 className="text-sm font-semibold text-carbon mb-4 uppercase tracking-wide">Filtros de catálogo</h2>
+            <p className="text-xs text-gray-400 mb-4">Seleccioná los valores que aplican a este producto. Los clientes podrán filtrar por estas opciones en la tienda.</p>
+
+            {filterGroups && filterGroups.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filterGroups.map((group) => (
+                  <div key={group.id}>
+                    <h3 className="text-xs font-semibold text-carbon mb-2">{group.name}</h3>
+                    <div className="space-y-1">
+                      {group.values.map((val) => (
+                        <label key={val.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer text-sm text-carbon transition-colors">
+                          {group.display_type === 'radio' ? (
+                            <input
+                              type="radio"
+                              name={`filter-group-${group.id}`}
+                              checked={filterValueIds.includes(val.id)}
+                              onChange={() => setFilterValueIds(prev => {
+                                // Radio: uncheck all other values in this group
+                                const otherIds = group.values.map(v => v.id)
+                                return [...prev.filter(id => !otherIds.includes(id)), val.id]
+                              })}
+                              className="accent-primary"
+                            />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={filterValueIds.includes(val.id)}
+                              onChange={() => toggleFilterValue(val.id)}
+                              className="accent-primary w-4 h-4 rounded border-gray-300"
+                            />
+                          )}
+                          {val.value}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div>
-                <label className="text-xs text-gray-400 mb-1 block">Movimiento</label>
-                <select value={form.movement} onChange={e => update('movement', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="">Seleccionar</option>
-                  <option value="Cuarzo">Cuarzo</option>
-                  <option value="Automático">Automático</option>
-                  <option value="Eco-Drive">Eco-Drive</option>
-                  <option value="Smartwatch">Smartwatch</option>
-                  <option value="Digital">Digital</option>
-                </select>
+            ) : (
+              <p className="text-sm text-gray-400">No hay filtros configurados. <a href="/admin/catalogo" className="text-primary hover:underline">Crear filtros</a></p>
+            )}
+          </div>
+
+          {/* Colors */}
+          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+            <h2 className="text-sm font-semibold text-carbon mb-4 uppercase tracking-wide">Colores</h2>
+            <p className="text-xs text-gray-400 mb-4">Seleccioná los colores que aplican a este producto (caja, esfera, correa). Aparecerán como swatches en el catálogo.</p>
+            {allColors && allColors.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {allColors.map((color) => {
+                  const isSelected = selectedColorIds.includes(color.id)
+                  return (
+                    <button
+                      key={color.id}
+                      type="button"
+                      onClick={() => toggleColor(color.id)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      <span
+                        className="w-5 h-5 rounded-full inline-block border border-gray-200 shrink-0"
+                        style={{ backgroundColor: color.hex }}
+                      />
+                      {color.name}
+                    </button>
+                  )
+                })}
               </div>
-            </div>
+            ) : (
+              <p className="text-sm text-gray-400">No hay colores configurados. <a href="/admin/catalogo" className="text-primary hover:underline">Gestionar colores</a></p>
+            )}
           </div>
 
           {/* Flags */}
@@ -420,7 +500,7 @@ export default function AdminProductForm() {
             </div>
           </div>
 
-          {/* Specs visual editor */}
+          {/* Specs (non-filterable technical details) */}
           <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-carbon uppercase tracking-wide">Especificaciones técnicas</h2>
@@ -429,7 +509,7 @@ export default function AdminProductForm() {
                 Cargar valores por defecto
               </button>
             </div>
-            <p className="text-xs text-gray-400 mb-3">Campos comunes para relojería. Podés agregar campos personalizados.</p>
+            <p className="text-xs text-gray-400 mb-3">Detalles técnicos que se muestran en la ficha del producto (no son filtrables).</p>
 
             <div className="space-y-2">
               {specEntries.map((entry, i) => (

@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Admin\ColorController as AdminColorController;
+use App\Http\Controllers\Admin\FilterController as AdminFilterController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
@@ -31,6 +33,19 @@ Route::get('/productos/{slug}', [ProductController::class, 'show']);
 Route::get('/categorias', [CategoryController::class, 'index']);
 Route::get('/categorias/{slug}', [CategoryController::class, 'show']);
 Route::get('/marcas', [BrandController::class, 'index']);
+Route::get('/colores', function () {
+    return response()->json([
+        'data' => \App\Models\Color::orderBy('sort_order')->get()
+    ]);
+});
+Route::get('/opciones-filtro', function () {
+    return response()->json([
+        'data' => \App\Models\FilterGroup::with('activeValues')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get()
+    ]);
+});
 
 // ─── Banners públicos ───
 Route::get('/banners', function () {
@@ -81,10 +96,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/carrito', [CartController::class, 'clear']);
 
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/user', [AuthController::class, 'updateProfile']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // Addresses
-    Route::apiResource('/direcciones', AddressController::class);
+    Route::apiResource('/direcciones', AddressController::class)->parameters(['direcciones' => 'address']);
 
     // Checkout
     Route::get('/checkout/resumen', [CheckoutController::class, 'summary']);
@@ -117,6 +133,21 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // ─── Admin routes (Sanctum + admin middleware) ───
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    // Colors
+    Route::get('/colores', [AdminColorController::class, 'index']);
+    Route::post('/colores', [AdminColorController::class, 'store']);
+    Route::put('/colores/{color}', [AdminColorController::class, 'update']);
+    Route::delete('/colores/{color}', [AdminColorController::class, 'destroy']);
+
+    // Filter management
+    Route::get('/filtros', [AdminFilterController::class, 'index']);
+    Route::post('/filtros/grupos', [AdminFilterController::class, 'storeGroup']);
+    Route::put('/filtros/grupos/{filterGroup}', [AdminFilterController::class, 'updateGroup']);
+    Route::delete('/filtros/grupos/{filterGroup}', [AdminFilterController::class, 'destroyGroup']);
+    Route::post('/filtros/valores', [AdminFilterController::class, 'storeValue']);
+    Route::put('/filtros/valores/{filterValue}', [AdminFilterController::class, 'updateValue']);
+    Route::delete('/filtros/valores/{filterValue}', [AdminFilterController::class, 'destroyValue']);
+
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/pedidos', [AdminOrderController::class, 'index']);
     Route::get('/pedidos/{order}', [AdminOrderController::class, 'show']);
@@ -140,6 +171,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
         return response()->json(['message' => 'Configuración actualizada.']);
     });
 
+    Route::get('/productos', [ProductController::class, 'adminIndex']);
     Route::get('/productos/{product}', [ProductController::class, 'adminShow']);
     Route::post('/productos', [ProductController::class, 'store']);
     Route::put('/productos/{product}', [ProductController::class, 'update']);
@@ -181,6 +213,8 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::delete('/imagenes/producto/{productImage}', [ImageController::class, 'destroyProductImage']);
     Route::put('/imagenes/reordenar', [ImageController::class, 'reorderImages']);
     Route::post('/imagenes/banner', [ImageController::class, 'uploadBannerImage']);
+    Route::post('/imagenes/hero', [ImageController::class, 'uploadHeroImage']);
+    Route::post('/imagenes/promocion', [ImageController::class, 'uploadPromotionImage']);
 });
 
 // ─── Webhooks Wompi (no auth) ───

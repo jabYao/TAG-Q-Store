@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAddresses, createAddress, updateAddress, deleteAddress } from '@/api'
 import type { AddressFormData } from '@/api'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { toast } from '@/stores/toastStore'
 
 export default function Addresses() {
@@ -75,6 +77,11 @@ export default function Addresses() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 lg:px-6 py-8">
+      <Breadcrumbs items={[
+        { label: 'Home', href: '/' },
+        { label: 'Mi Cuenta', href: '/perfil' },
+        { label: 'Direcciones' },
+      ]} />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-carbon">Mis Direcciones</h1>
         {!isCreating && (

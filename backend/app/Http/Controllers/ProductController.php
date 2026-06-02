@@ -16,7 +16,7 @@ class ProductController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('auth:sanctum', except: ['index', 'show']),
-            new Middleware('admin', only: ['store', 'update', 'destroy']),
+            new Middleware('admin', only: ['adminIndex', 'store', 'update', 'destroy']),
         ];
     }
 
@@ -26,7 +26,7 @@ class ProductController extends Controller implements HasMiddleware
     public function index(Request $request): JsonResponse
     {
         $query = Product::active()->published()
-            ->with(['brand', 'category', 'primaryImage']);
+            ->with(['brand', 'category', 'primaryImage', 'filterValues', 'colors']);
 
         // Filtros
         if ($request->filled('category')) {
@@ -51,6 +51,27 @@ class ProductController extends Controller implements HasMiddleware
 
         if ($request->filled('max_price')) {
             $query->where('price', '<=', $request->max_price);
+        }
+
+        // Filter by colors (comma-separated color IDs)
+        if ($request->filled('colors')) {
+            $colorIds = array_map('intval', explode(',', $request->colors));
+            $query->whereHas('colors', fn($q) => $q->whereIn('colors.id', $colorIds));
+        }
+
+        // Filter by filter_values (comma-separated IDs from catalog filters)
+        if ($request->filled('filter_values')) {
+            $filterValueIds = array_map('intval', explode(',', $request->filter_values));
+
+            // Group by filter_group_id for AND/OR logic
+            $grouped = \App\Models\FilterValue::whereIn('id', $filterValueIds)
+                ->get()
+                ->groupBy('filter_group_id');
+
+            foreach ($grouped as $groupId => $values) {
+                $ids = $values->pluck('id')->toArray();
+                $query->whereHas('filterValues', fn($q) => $q->whereIn('filter_values.id', $ids));
+            }
         }
 
         if ($request->filled('search')) {
@@ -97,7 +118,7 @@ class ProductController extends Controller implements HasMiddleware
     public function show(string $slug): JsonResponse
     {
         $product = Product::active()->published()
-            ->with(['brand', 'category', 'primaryImage', 'images' => fn($q) => $q->ordered()])
+            ->with(['brand', 'category', 'primaryImage', 'images' => fn($q) => $q->ordered(), 'filterValues', 'colors'])
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -134,9 +155,21 @@ class ProductController extends Controller implements HasMiddleware
             'primary_image' => 'nullable|string|max:2000',
             'gallery' => 'nullable|array',
             'gallery.*' => 'string|max:2000',
+            'filter_value_ids' => 'nullable|array',
+            'filter_value_ids.*' => 'integer|exists:filter_values,id',
+            'color_ids' => 'nullable|array',
+            'color_ids.*' => 'integer|exists:colors,id',
         ]);
 
         $product = Product::create($validated);
+
+        if (isset($validated['filter_value_ids'])) {
+            $product->filterValues()->sync($validated['filter_value_ids']);
+        }
+
+        if (isset($validated['color_ids'])) {
+            $product->colors()->sync($validated['color_ids']);
+        }
 
         // Crear imagen principal si se envió una URL
         if (!empty($validated['primary_image'])) {
@@ -168,7 +201,7 @@ class ProductController extends Controller implements HasMiddleware
         }
 
         return response()->json([
-            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage', 'images'])),
+            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage', 'images', 'filterValues', 'colors'])),
         ], 201);
     }
 
@@ -200,9 +233,21 @@ class ProductController extends Controller implements HasMiddleware
             'primary_image' => 'nullable|string|max:2000',
             'gallery' => 'nullable|array',
             'gallery.*' => 'string|max:2000',
+            'filter_value_ids' => 'nullable|array',
+            'filter_value_ids.*' => 'integer|exists:filter_values,id',
+            'color_ids' => 'nullable|array',
+            'color_ids.*' => 'integer|exists:colors,id',
         ]);
 
         $product->update($validated);
+
+        if (isset($validated['filter_value_ids'])) {
+            $product->filterValues()->sync($validated['filter_value_ids']);
+        }
+
+        if (isset($validated['color_ids'])) {
+            $product->colors()->sync($validated['color_ids']);
+        }
 
         // Actualizar o crear imagen principal
         if (!empty($validated['primary_image'])) {
@@ -242,7 +287,54 @@ class ProductController extends Controller implements HasMiddleware
         Cache::forget("product.slug.{$product->slug}");
 
         return response()->json([
-            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage', 'images'])),
+            'data' => ProductResource::make($product->load(['brand', 'category', 'primaryImage', 'images', 'filterValues', 'colors'])),
+        ]);
+    }
+
+    /**
+     * Listado completo de productos para el panel admin.
+     * Incluye productos inactivos y no publicados.
+     */
+    public function adminIndex(Request $request): JsonResponse
+    {
+        $query = Product::with(['brand', 'category', 'primaryImage']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhereHas('brand', fn($b) => $b->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($request->filled('category') && is_numeric($request->category)) {
+            $query->where('category_id', $request->category);
+        } elseif ($request->filled('category')) {
+            $query->whereHas('category', fn($q) => $q->where('slug', $request->category));
+        }
+
+        $sort = $request->sort ?? 'recent';
+        $query = match ($sort) {
+            'price_asc' => $query->orderBy('price'),
+            'price_desc' => $query->orderByDesc('price'),
+            'name_asc' => $query->orderBy('name'),
+            'name_desc' => $query->orderByDesc('name'),
+            default => $query->orderByDesc('created_at'),
+        };
+
+        $perPage = min((int) $request->per_page, 100) ?: 20;
+        $products = $query->paginate($perPage);
+
+        // Reutilizamos ProductResource para保持一致
+        return response()->json([
+            'data' => ProductResource::collection($products),
+            'meta' => [
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+                'per_page' => $products->perPage(),
+                'total' => $products->total(),
+            ],
         ]);
     }
 
@@ -263,7 +355,7 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function adminShow(Product $product): JsonResponse
     {
-        $product->load(['brand', 'category', 'primaryImage', 'images']);
+        $product->load(['brand', 'category', 'primaryImage', 'images', 'filterValues', 'colors']);
 
         return response()->json([
             'data' => ProductResource::make($product),

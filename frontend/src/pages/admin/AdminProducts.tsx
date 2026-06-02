@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchProducts, deleteProduct, updateProduct } from '@/api'
+import { fetchAdminProducts, deleteProduct, updateProduct } from '@/api'
 import { toast } from '@/stores/toastStore'
 
 const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
@@ -14,7 +14,7 @@ export default function AdminProducts() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'products', search, categoryFilter, page],
-    queryFn: () => fetchProducts({
+    queryFn: () => fetchAdminProducts({
       search: search || undefined,
       category: categoryFilter || undefined,
       per_page: 20,

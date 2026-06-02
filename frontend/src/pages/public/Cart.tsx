@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useCartStore } from '@/stores/cartStore'
 import { toast } from '@/stores/toastStore'
 import SEO from '@/components/SEO'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { CartSkeleton } from '@/components/Skeleton'
 
 const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
@@ -40,6 +41,10 @@ function CartContent() {
   if (!hydrated) {
     return (
       <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+        <Breadcrumbs items={[
+          { label: 'Home', href: '/' },
+          { label: 'Carrito' },
+        ]} />
         <h1 className="text-2xl md:text-3xl font-semibold text-carbon mb-6">Carrito</h1>
         <CartSkeleton />
       </div>
@@ -48,6 +53,10 @@ function CartContent() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+      <Breadcrumbs items={[
+        { label: 'Home', href: '/' },
+        { label: 'Carrito' },
+      ]} />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

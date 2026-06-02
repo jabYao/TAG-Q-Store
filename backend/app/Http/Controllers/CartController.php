@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Services\CloudinaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -49,7 +50,7 @@ class CartController extends Controller
                     'slug' => $item->product->slug,
                     'price' => (float) $item->unit_price,
                     'quantity' => $item->quantity,
-                    'image_url' => $item->product->primaryImage?->cloudinary_url,
+                    'image_url' => CloudinaryService::optimizeUrl($item->product->primaryImage?->cloudinary_url, 200),
                     'stock' => $item->product->stock,
                 ]),
                 'count' => $cart->count,

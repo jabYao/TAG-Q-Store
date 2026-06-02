@@ -28,9 +28,8 @@ class ImageController extends Controller
         $file = $request->file('image');
         $productId = $validated['product_id'] ?? null;
 
-        // Subir a Cloudinary
-        $folder = $productId ? "tag-q/products/{$productId}" : 'tag-q/products/pending';
-        $result = $this->cloudinary->upload($file, ['folder' => $folder]);
+        // Subir a Cloudinary en carpeta tag-q/producto (plana, sin subcarpeta por producto)
+        $result = $this->cloudinary->upload($file, ['folder' => 'tag-q/producto']);
 
         // Si hay product_id, crear registro en BD
         if ($productId) {
@@ -121,7 +120,69 @@ class ImageController extends Controller
         $file = $request->file('image');
 
         $result = $this->cloudinary->upload($file, [
-            'folder' => 'tag-q/banners',
+            'folder' => 'tag-q/banner',
+            'public_id' => $validated['public_id'] ?? null,
+            'transformation' => [
+                'quality' => 'auto:best',
+                'fetch_format' => 'auto',
+                'width' => 1920,
+                'crop' => 'limit',
+            ],
+        ]);
+
+        return response()->json([
+            'data' => [
+                'url' => $result['secure_url'],
+                'public_id' => $result['public_id'],
+            ],
+        ], 201);
+    }
+
+    /**
+     * Upload a hero image.
+     */
+    public function uploadHeroImage(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,webp|max:10240', // 10MB
+            'public_id' => 'nullable|string',
+        ]);
+
+        $file = $request->file('image');
+
+        $result = $this->cloudinary->upload($file, [
+            'folder' => 'tag-q/hero',
+            'public_id' => $validated['public_id'] ?? null,
+            'transformation' => [
+                'quality' => 'auto:best',
+                'fetch_format' => 'auto',
+                'width' => 1920,
+                'crop' => 'limit',
+            ],
+        ]);
+
+        return response()->json([
+            'data' => [
+                'url' => $result['secure_url'],
+                'public_id' => $result['public_id'],
+            ],
+        ], 201);
+    }
+
+    /**
+     * Upload a promotion image.
+     */
+    public function uploadPromotionImage(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,webp|max:10240', // 10MB
+            'public_id' => 'nullable|string',
+        ]);
+
+        $file = $request->file('image');
+
+        $result = $this->cloudinary->upload($file, [
+            'folder' => 'tag-q/promociones',
             'public_id' => $validated['public_id'] ?? null,
             'transformation' => [
                 'quality' => 'auto:best',

@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchOrder } from '@/api'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { DetailSkeleton } from '@/components/Skeleton'
 
 const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
@@ -26,9 +27,17 @@ export default function OrderDetail() {
     enabled: !!id,
   })
 
+  const breadcrumbs = (orderNumber?: string) => [
+    { label: 'Home', href: '/' },
+    { label: 'Mi Cuenta', href: '/perfil' },
+    { label: 'Mis Pedidos', href: '/mis-pedidos' },
+    ...(orderNumber ? [{ label: orderNumber }] : [{ label: 'Pedido' }]),
+  ] as const
+
   if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto px-4 lg:px-6 py-8">
+        <Breadcrumbs items={breadcrumbs()} />
         <DetailSkeleton />
       </div>
     )
@@ -37,6 +46,7 @@ export default function OrderDetail() {
   if (isError || !order) {
     return (
       <div className="max-w-3xl mx-auto px-4 lg:px-6 py-16 text-center">
+        <Breadcrumbs items={breadcrumbs()} />
         <span className="text-5xl">🔍</span>
         <h2 className="text-lg font-semibold text-carbon mt-4">Pedido no encontrado</h2>
         <Link to="/mis-pedidos" className="inline-block mt-4 text-primary hover:underline text-sm">Volver a mis pedidos</Link>
@@ -48,6 +58,7 @@ export default function OrderDetail() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 lg:px-6 py-8">
+      <Breadcrumbs items={breadcrumbs(order.order_number)} />
       {/* Header */}
       <Link to="/mis-pedidos" className="text-sm text-primary hover:underline inline-block mb-4">
         ← Mis pedidos

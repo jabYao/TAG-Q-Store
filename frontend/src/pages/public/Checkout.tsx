@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { placeOrder, fetchAddresses } from '@/api'
 import { useCartStore } from '@/stores/cartStore'
 import SEO from '@/components/SEO'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import WompiPaymentButton from '@/components/WompiPaymentButton'
 import { CartSkeleton } from '@/components/Skeleton'
 import { toast } from '@/stores/toastStore'
@@ -117,6 +118,11 @@ export default function Checkout() {
   if (!hydrated) {
     return (
       <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+        <Breadcrumbs items={[
+          { label: 'Home', href: '/' },
+          { label: 'Carrito', href: '/carrito' },
+          { label: 'Checkout' },
+        ]} />
         <h1 className="text-2xl md:text-3xl font-semibold text-carbon mb-6">Checkout</h1>
         <CartSkeleton />
       </div>
@@ -148,6 +154,11 @@ export default function Checkout() {
         description="Completá tu compra en TAG-Q de forma segura. Wompi protegido, envío gratis desde $400.000 COP."
         url="/checkout"
       />
+      <Breadcrumbs items={[
+        { label: 'Home', href: '/' },
+        { label: 'Carrito', href: '/carrito' },
+        { label: 'Checkout' },
+      ]} />
       {/* Steps indicator */}
       <div className="flex items-center justify-center gap-0 mb-8">
         {steps.map((s, i) => (

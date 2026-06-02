@@ -97,3 +97,11 @@ export async function fetchUser(): Promise<User> {
   const { data } = await api.get<{ user: User }>('/user')
   return data.user
 }
+
+/**
+ * Update current authenticated user's profile.
+ */
+export async function updateProfile(input: Partial<Pick<User, 'name' | 'email' | 'phone'>>): Promise<{ user: User; message: string }> {
+  const { data } = await api.put<{ user: User; message: string }>('/user', input)
+  return data
+}

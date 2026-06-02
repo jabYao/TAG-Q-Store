@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchOrders } from '@/api'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { OrderListSkeleton } from '@/components/Skeleton'
 
 const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
@@ -23,9 +24,16 @@ export default function MyOrders() {
     queryFn: fetchOrders,
   })
 
+  const breadcrumbs = [
+    { label: 'Home', href: '/' },
+    { label: 'Mi Cuenta', href: '/perfil' },
+    { label: 'Mis Pedidos' },
+  ]
+
   if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto px-4 lg:px-6 py-8">
+        <Breadcrumbs items={breadcrumbs} />
         <h1 className="text-2xl font-semibold text-carbon mb-6">Mis Pedidos</h1>
         <OrderListSkeleton />
       </div>
@@ -34,6 +42,7 @@ export default function MyOrders() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 lg:px-6 py-8">
+      <Breadcrumbs items={breadcrumbs} />
       <h1 className="text-2xl font-semibold text-carbon mb-6">Mis Pedidos</h1>
 
       {!orders || orders.length === 0 ? (

@@ -5,8 +5,7 @@ import { AdminPageSkeleton } from './PageSkeleton'
 const navItems = [
   { label: 'Dashboard', href: '/admin', icon: '📊' },
   { label: 'Productos', href: '/admin/productos', icon: '📦' },
-  { label: 'Categorías', href: '/admin/categorias', icon: '📁' },
-  { label: 'Marcas', href: '/admin/marcas', icon: '🏷️' },
+  { label: 'Catálogo', href: '/admin/catalogo', icon: '🏷️' },
   { label: 'Hero', href: '/admin/heroes', icon: '🎯' },
   { label: 'Banners', href: '/admin/imagenes', icon: '🖼️' },
   { label: 'Pedidos', href: '/admin/pedidos', icon: '📋' },

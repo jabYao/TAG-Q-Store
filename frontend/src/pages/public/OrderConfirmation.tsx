@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchOrder } from '@/api'
 import SEO from '@/components/SEO'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { Skeleton } from '@/components/Skeleton'
 
 const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
@@ -15,9 +16,17 @@ export default function OrderConfirmation() {
     enabled: !!id,
   })
 
+  const breadcrumbs = [
+    { label: 'Home', href: '/' },
+    { label: 'Carrito', href: '/carrito' },
+    { label: 'Checkout', href: '/checkout' },
+    { label: 'Confirmación' },
+  ]
+
   if (isLoading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
+      <div className="max-w-2xl mx-auto px-4 py-8 text-center space-y-4">
+        <Breadcrumbs items={breadcrumbs} />
         <Skeleton className="h-16 w-16 rounded-full mx-auto" />
         <Skeleton className="h-8 w-64 mx-auto" />
         <Skeleton className="h-4 w-48 mx-auto" />
@@ -27,7 +36,8 @@ export default function OrderConfirmation() {
 
   if (isError || !order) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+      <div className="max-w-2xl mx-auto px-4 py-8 text-center">
+        <Breadcrumbs items={breadcrumbs} />
         <span className="text-5xl">🔍</span>
         <h2 className="text-xl font-semibold text-carbon mt-4">Pedido no encontrado</h2>
         <Link to="/mis-pedidos" className="inline-block mt-4 text-primary hover:underline text-sm">
@@ -42,7 +52,8 @@ export default function OrderConfirmation() {
   return (
     <>
       <SEO title="Pedido Confirmado" noIndex />
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+      <div className="max-w-2xl mx-auto px-4 py-8 text-center">
+        <Breadcrumbs items={breadcrumbs} />
         {/* Success icon */}
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <span className="text-4xl">✅</span>

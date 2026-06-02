@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchProducts } from '@/api'
+import { fetchProducts, fetchFilterOptions, fetchColors } from '@/api'
 import ProductCard from '@/components/ProductCard'
 import CatalogFilters, { sortOptions } from '@/components/CatalogFilters'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import SEO from '@/components/SEO'
 import { ProductGridSkeleton } from '@/components/Skeleton'
 
@@ -15,29 +16,44 @@ export default function Catalog() {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000])
   const [sortBy, setSortBy] = useState('recent')
-  const [selectedTipo, setSelectedTipo] = useState<string[]>([])
-  const [selectedGenero, setSelectedGenero] = useState('')
-  const [selectedEstilo, setSelectedEstilo] = useState<string[]>([])
-  const [selectedMovimiento, setSelectedMovimiento] = useState<string[]>([])
-  const [selectedMaterial, setSelectedMaterial] = useState<string[]>([])
-  const [selectedColor, setSelectedColor] = useState<string[]>([])
-  const [selectedTamano, setSelectedTamano] = useState<string[]>([])
-  const [selectedResistencia, setSelectedResistencia] = useState<string[]>([])
-  const [selectedFunciones, setSelectedFunciones] = useState<string[]>([])
+  const [selectedFilterIds, setSelectedFilterIds] = useState<number[]>([])
+  const [selectedColorIds, setSelectedColorIds] = useState<number[]>([])
   const [currentPage, setCurrentPage] = useState(1)
-  const [showFilters, setShowFilters] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
+
+  // Detect mobile for filter behavior
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Fetch filter groups & colors from the API
+  const { data: filterGroups } = useQuery({
+    queryKey: ['filter-options'],
+    queryFn: fetchFilterOptions,
+    staleTime: 300_000,
+  })
+
+  const { data: allColors } = useQuery({
+    queryKey: ['colors'],
+    queryFn: fetchColors,
+    staleTime: 300_000,
+  })
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['products', 'catalog', selectedCategory, selectedBrands, priceRange, sortBy, selectedGenero, selectedMovimiento, currentPage],
+    queryKey: ['products', 'catalog', selectedCategory, selectedBrands, priceRange, sortBy, selectedFilterIds, selectedColorIds, currentPage],
     queryFn: () => fetchProducts({
       category: selectedCategory || undefined,
-      gender: selectedGenero || undefined,
-      movement: selectedMovimiento[0] || undefined,
       min_price: priceRange[0] > 0 ? priceRange[0] : undefined,
       max_price: priceRange[1] < 1000000 ? priceRange[1] : undefined,
       sort: sortBy,
       page: currentPage,
       per_page: ITEMS_PER_PAGE,
+      filter_values: selectedFilterIds.length > 0 ? selectedFilterIds.join(',') : undefined,
+      colors: selectedColorIds.length > 0 ? selectedColorIds.join(',') : undefined,
     }),
     placeholderData: (prev) => prev,
   })
@@ -45,8 +61,6 @@ export default function Catalog() {
   const products = data?.data ?? []
   const meta = data?.meta
   const totalPages = meta?.last_page ?? 1
-
-  const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -57,15 +71,44 @@ export default function Catalog() {
     setSelectedCategory('')
     setSelectedBrands([])
     setPriceRange([0, 1000000])
-    setSelectedGenero('')
-    setSelectedMovimiento([])
+    setSelectedFilterIds([])
+    setSelectedColorIds([])
     setCurrentPage(1)
   }
 
-  const hasActiveFilters = selectedCategory || selectedGenero || selectedMovimiento.length > 0 ||
-    selectedBrands.length > 0 || priceRange[0] > 0 || priceRange[1] < 1000000
+  const hasActiveFilters = selectedCategory || selectedFilterIds.length > 0 ||
+    selectedColorIds.length > 0 || selectedBrands.length > 0 || priceRange[0] > 0 || priceRange[1] < 1000000
 
   const categoryName = selectedCategory ? selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1) : 'Catálogo'
+
+  const breadcrumbs = [
+    { label: 'Home', href: '/' },
+    { label: selectedCategory || 'Catálogo' },
+  ]
+
+  // Toggle a filter value by ID. For radio groups, replace the selection.
+  const handleToggleFilter = (valueId: number, group: FilterGroupOption) => {
+    setCurrentPage(1)
+    setSelectedFilterIds(prev => {
+      if (group.display_type === 'radio') {
+        const groupIds = group.values.map(v => v.id)
+        return [...prev.filter(id => !groupIds.includes(id)), valueId]
+      } else {
+        return prev.includes(valueId)
+          ? prev.filter(id => id !== valueId)
+          : [...prev, valueId]
+      }
+    })
+  }
+
+  const handleToggleColor = (colorId: number) => {
+    setCurrentPage(1)
+    setSelectedColorIds(prev =>
+      prev.includes(colorId)
+        ? prev.filter(id => id !== colorId)
+        : [...prev, colorId]
+    )
+  }
 
   return (
     <>
@@ -75,168 +118,168 @@ export default function Catalog() {
         url={`/catalogo${selectedCategory ? `?categoria=${selectedCategory}` : ''}`}
       />
       <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-carbon">
-            {searchParams.get('categoria')
-              ? `Categoría: ${searchParams.get('categoria')}`
-              : searchParams.get('busqueda')
-                ? `Búsqueda: "${searchParams.get('busqueda')}"`
-                : 'Catálogo'}
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            {isLoading ? 'Cargando...' : `${meta?.total ?? 0} productos`}
-          </p>
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={breadcrumbs} />
+
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold text-carbon">
+              {searchParams.get('categoria')
+                ? `Categoría: ${searchParams.get('categoria')}`
+                : searchParams.get('busqueda')
+                  ? `Búsqueda: "${searchParams.get('busqueda')}"`
+                  : 'Catálogo'}
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">
+              {isLoading ? 'Cargando...' : `${meta?.total ?? 0} productos`}
+            </p>
+          </div>
+
+          {/* Sort + Filter toggle (mobile only) */}
+          <div className="flex items-center gap-3 mt-3 md:mt-0">
+            <select
+              value={sortBy}
+              onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1) }}
+              className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            >
+              {sortOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            {/* Mobile-only filter button */}
+            <button
+              onClick={() => setShowMobileFilters(true)}
+              className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all lg:hidden ${
+                hasActiveFilters
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              Filtros {hasActiveFilters && `(${selectedFilterIds.length})`}
+            </button>
+          </div>
         </div>
 
-        {/* Sort + Filter toggle */}
-        <div className="flex items-center gap-3 mt-3 md:mt-0">
-          <select
-            value={sortBy}
-            onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1) }}
-            className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-          >
-            {sortOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
-              showFilters || hasActiveFilters
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            Filtros {hasActiveFilters && `(${hasActiveFilters ? '1' : ''})`}
-          </button>
-        </div>
-      </div>
-
-      <div className="flex gap-8">
-        {/* Filters Sidebar */}
-        {showFilters && (
-          <CatalogFilters
-            selectedCategory={selectedCategory}
-            setSelectedCategory={(v) => { setSelectedCategory(v); setCurrentPage(1) }}
-            selectedBrands={selectedBrands}
-            setSelectedBrands={(v) => { setSelectedBrands(v); setCurrentPage(1) }}
-            priceRange={priceRange}
-            setPriceRange={(v) => { setPriceRange(v); setCurrentPage(1) }}
-            sortBy={sortBy}
-            setSortBy={(v) => { setSortBy(v); setCurrentPage(1) }}
-            selectedTipo={selectedTipo}
-            setSelectedTipo={setSelectedTipo}
-            selectedGenero={selectedGenero}
-            setSelectedGenero={(v) => { setSelectedGenero(v); setCurrentPage(1) }}
-            selectedEstilo={selectedEstilo}
-            setSelectedEstilo={setSelectedEstilo}
-            selectedMovimiento={selectedMovimiento}
-            setSelectedMovimiento={(v) => { setSelectedMovimiento(v); setCurrentPage(1) }}
-            selectedMaterial={selectedMaterial}
-            setSelectedMaterial={setSelectedMaterial}
-            selectedColor={selectedColor}
-            setSelectedColor={setSelectedColor}
-            selectedTamano={selectedTamano}
-            setSelectedTamano={setSelectedTamano}
-            selectedResistencia={selectedResistencia}
-            setSelectedResistencia={setSelectedResistencia}
-            selectedFunciones={selectedFunciones}
-            setSelectedFunciones={setSelectedFunciones}
-            clearFilters={clearFilters}
-            hasActiveFilters={!!hasActiveFilters}
-          />
-        )}
-
-        {/* Product Grid */}
-        <div className="flex-1">
-          {isLoading ? (
-            <ProductGridSkeleton count={ITEMS_PER_PAGE} />
-          ) : products.length === 0 ? (
-            <div className="text-center py-16">
-              <span className="text-5xl">🔍</span>
-              <h3 className="text-lg font-semibold text-carbon mt-4">No encontramos productos</h3>
-              <p className="text-sm text-gray-400 mt-1">Probá con otros filtros o términos de búsqueda</p>
-              <button onClick={clearFilters} className="mt-4 text-sm text-primary hover:underline">Limpiar filtros</button>
-            </div>
-          ) : (
-            <>
-              <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5 ${isFetching ? 'opacity-70 transition-opacity' : ''}`}>
-                {products.map((product) => (
-                  <ProductCard
-                    key={product.slug}
-                    productId={product.id}
-                    name={product.name}
-                    slug={product.slug}
-                    price={product.price}
-                    originalPrice={product.original_price ?? undefined}
-                    imageUrl={product.thumbnail ?? product.primary_image ?? undefined}
-                    reference={product.sku}
-                    isOutOfStock={product.is_out_of_stock}
-                    badge={
-                      product.discount_percent && product.discount_percent >= 10
-                        ? { label: `-${product.discount_percent}%`, variant: 'gold' as const }
-                        : product.is_new
-                          ? { label: 'NUEVO', variant: 'primary' as const }
-                          : undefined
-                    }
-                  />
-                ))}
-              </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-10">
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage <= 1}
-                    className="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  >
-                    ← Anterior
-                  </button>
-
-                  {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
-                    let pageNum: number
-                    if (totalPages <= 7) {
-                      pageNum = i + 1
-                    } else if (currentPage <= 4) {
-                      pageNum = i + 1
-                    } else if (currentPage >= totalPages - 3) {
-                      pageNum = totalPages - 6 + i
-                    } else {
-                      pageNum = currentPage - 3 + i
-                    }
-
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`w-9 h-9 text-sm rounded-lg border transition-all ${
-                          pageNum === currentPage
-                            ? 'bg-primary text-white border-primary'
-                            : 'border-gray-200 bg-white hover:bg-gray-50'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    )
-                  })}
-
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage >= totalPages}
-                    className="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  >
-                    Siguiente →
-                  </button>
-                </div>
+        <div className="flex gap-8">
+          {/* Filters — always visible on desktop, overlay on mobile */}
+          <div className={`
+            ${isMobile ? (showMobileFilters ? 'fixed inset-0 z-50 bg-black/40 flex' : 'hidden') : 'block w-[280px]'}
+          `}>
+            {/* Mobile backdrop click to close */}
+            {isMobile && (
+              <div className="flex-1" onClick={() => setShowMobileFilters(false)} />
+            )}
+            <div className={`
+              ${isMobile
+                ? 'w-[300px] max-w-[85vw] bg-white p-6 overflow-y-auto h-full shadow-xl'
+                : 'w-[280px] shrink-0'
+              }
+            `}>
+              {filterGroups && (
+                <CatalogFilters
+                  groups={filterGroups}
+                  colors={allColors ?? []}
+                  selectedIds={selectedFilterIds}
+                  selectedColorIds={selectedColorIds}
+                  onToggle={handleToggleFilter}
+                  onToggleColor={handleToggleColor}
+                  onClear={clearFilters}
+                  hasActiveFilters={!!hasActiveFilters}
+                  onClose={() => setShowMobileFilters(false)}
+                />
               )}
-            </>
-          )}
+            </div>
+          </div>
+
+          {/* Product Grid */}
+          <div className="flex-1 min-w-0">
+            {isLoading ? (
+              <ProductGridSkeleton count={ITEMS_PER_PAGE} />
+            ) : products.length === 0 ? (
+              <div className="text-center py-16">
+                <span className="text-5xl">🔍</span>
+                <h3 className="text-lg font-semibold text-carbon mt-4">No encontramos productos</h3>
+                <p className="text-sm text-gray-400 mt-1">Probá con otros filtros o términos de búsqueda</p>
+                <button onClick={clearFilters} className="mt-4 text-sm text-primary hover:underline">Limpiar filtros</button>
+              </div>
+            ) : (
+              <>
+                <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5 ${isFetching ? 'opacity-70 transition-opacity' : ''}`}>
+                  {products.map((product) => (
+                    <ProductCard
+                      key={product.slug}
+                      productId={product.id}
+                      name={product.name}
+                      slug={product.slug}
+                      price={product.price}
+                      originalPrice={product.original_price ?? undefined}
+                      imageUrl={product.thumbnail ?? product.primary_image ?? undefined}
+                      reference={product.sku}
+                      isOutOfStock={product.is_out_of_stock}
+                      badge={
+                        product.discount_percent && product.discount_percent >= 10
+                          ? { label: `-${product.discount_percent}%`, variant: 'gold' as const }
+                          : product.is_new
+                            ? { label: 'NUEVO', variant: 'primary' as const }
+                            : undefined
+                      }
+                    />
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 mt-10">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage <= 1}
+                      className="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      ← Anterior
+                    </button>
+
+                    {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
+                      let pageNum: number
+                      if (totalPages <= 7) {
+                        pageNum = i + 1
+                      } else if (currentPage <= 4) {
+                        pageNum = i + 1
+                      } else if (currentPage >= totalPages - 3) {
+                        pageNum = totalPages - 6 + i
+                      } else {
+                        pageNum = currentPage - 3 + i
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`w-9 h-9 text-sm rounded-lg border transition-all ${
+                            pageNum === currentPage
+                              ? 'bg-primary text-white border-primary'
+                              : 'border-gray-200 bg-white hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      )
+                    })}
+
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage >= totalPages}
+                      className="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </>
   )
 }

@@ -1,5 +1,6 @@
 import SEO from '@/components/SEO'
 import { Link } from 'react-router-dom'
+import Breadcrumbs from '@/components/Breadcrumbs'
 
 const sections = [
   {
@@ -75,12 +76,10 @@ export default function Policies() {
   return (
     <div className="max-w-4xl mx-auto px-4 lg:px-6 py-8">
       <SEO title="Políticas" description="Términos y condiciones, política de privacidad y políticas de envío y devolución de TAG-Q." url="/politicas" />
-      {/* Breadcrumb */}
-      <nav className="text-xs text-gray-400 mb-6">
-        <Link to="/" className="hover:text-primary">Home</Link>
-        <span className="mx-1">/</span>
-        <span className="text-carbon">Políticas</span>
-      </nav>
+      <Breadcrumbs items={[
+        { label: 'Home', href: '/' },
+        { label: 'Políticas' },
+      ]} />
 
       <h1 className="text-2xl md:text-3xl font-semibold text-carbon mb-2">Políticas Legales</h1>
       <p className="text-sm text-gray-400 mb-8">Términos y condiciones de uso de TAG-Q</p>

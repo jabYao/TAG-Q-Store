@@ -37,6 +37,7 @@ const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'))
 const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'))
 const AdminProducts = lazy(() => import('@/pages/admin/AdminProducts'))
 const AdminProductForm = lazy(() => import('@/pages/admin/AdminProductForm'))
+const AdminCatalog = lazy(() => import('@/pages/admin/AdminCatalog'))
 const AdminBrands = lazy(() => import('@/pages/admin/AdminBrands'))
 const AdminCategories = lazy(() => import('@/pages/admin/AdminCategories'))
 const AdminHeroes = lazy(() => import('@/pages/admin/AdminHeroes'))
@@ -118,6 +119,7 @@ export default function AppRouter() {
             <Route path="productos" element={<AdminProducts />} />
             <Route path="productos/nuevo" element={<AdminProductForm />} />
             <Route path="productos/:id/editar" element={<AdminProductForm />} />
+            <Route path="catalogo" element={<AdminCatalog />} />
             <Route path="marcas" element={<AdminBrands />} />
             <Route path="categorias" element={<AdminCategories />} />
             <Route path="heroes" element={<AdminHeroes />} />
