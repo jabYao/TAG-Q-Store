@@ -75,7 +75,7 @@ export default function AdminProducts() {
           <option value="">Categoría: Todas</option>
           <option value="dama">Dama</option>
           <option value="caballero">Caballero</option>
-          <option value="branded">Branded</option>
+          <option value="ofertas">Ofertas</option>
         </select>
       </div>
 

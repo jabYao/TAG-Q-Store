@@ -100,6 +100,7 @@ export interface ProductFilters {
   per_page?: number
   filter_values?: string
   colors?: string
+  on_sale?: boolean
 }
 
 export async function fetchProducts(filters: ProductFilters = {}): Promise<ProductListResponse> {

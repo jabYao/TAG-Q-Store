@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useRef, useCallback } from 'react'
 import { Outlet, Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useCartStore } from '@/stores/cartStore'
@@ -6,17 +6,17 @@ import { useAuthStore } from '@/stores/authStore'
 import { PageSkeleton } from '@/components/PageSkeleton'
 import Footer from '@/components/Footer'
 import CartDrawer from '@/components/CartDrawer'
+import SearchOverlay from '@/components/SearchOverlay'
 import { fetchTopBarSettings } from '@/api'
 import type { TopBarMessage } from '@/api/settings'
 
 const navLinks = [
   { label: 'Home', href: '/' },
   { label: 'Shop', href: '/catalogo' },
-  { label: 'Categorías', href: '/categorias' },
   { label: 'Dama', href: '/categoria/dama' },
   { label: 'Caballero', href: '/categoria/caballero' },
-  { label: 'Branded', href: '/categoria/branded' },
-
+  { label: 'Ofertas', href: '/categoria/ofertas' },
+  { label: 'Contacto', href: '/contacto' },
 ]
 
 export default function PublicLayout() {
@@ -56,12 +56,32 @@ export default function PublicLayout() {
     return () => clearInterval(interval)
   }, [topBarMessages.length])
 
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
+
+  // Cerrar overlay al hacer click fuera
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSearchOverlay(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
+    setShowSearchOverlay(false)
     if (searchQuery.trim()) {
-      navigate(`/busqueda?q=${encodeURIComponent(searchQuery.trim())}`)
+      navigate(`/busqueda?busqueda=${encodeURIComponent(searchQuery.trim())}`)
     }
   }
+
+  const handleSearchOverlaySelect = useCallback(() => {
+    setShowSearchOverlay(false)
+    setSearchQuery('')
+  }, [])
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -98,17 +118,35 @@ export default function PublicLayout() {
             </button>
 
             {/* Search (desktop) */}
-            <div className="hidden md:flex items-center gap-2 w-full max-w-[240px]">
+            <div className="hidden md:flex items-center gap-2 w-full max-w-[240px] relative" ref={searchRef}>
               <form onSubmit={handleSearch} className="relative w-full">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    if (e.target.value.trim()) setShowSearchOverlay(true)
+                    else setShowSearchOverlay(false)
+                  }}
+                  onFocus={(e) => { if (e.target.value.trim()) setShowSearchOverlay(true) }}
                   placeholder="Buscá tu reloj ideal..."
                   className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-carbon placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-colors"
                 />
               </form>
+
+              {/* Overlay de resultados */}
+              <SearchOverlay
+                query={searchQuery}
+                visible={showSearchOverlay}
+                onSelect={handleSearchOverlaySelect}
+                onViewAll={() => {
+                  setShowSearchOverlay(false)
+                  if (searchQuery.trim()) {
+                    navigate(`/busqueda?busqueda=${encodeURIComponent(searchQuery.trim())}`)
+                  }
+                }}
+              />
             </div>
 
             {/* Logo */}
@@ -253,8 +291,9 @@ export default function PublicLayout() {
                   onSubmit={(e) => {
                     e.preventDefault()
                     if (searchQuery.trim()) {
-                      navigate(`/busqueda?q=${encodeURIComponent(searchQuery.trim())}`)
+                      navigate(`/busqueda?busqueda=${encodeURIComponent(searchQuery.trim())}`)
                       setShowMobileMenu(false)
+                      setSearchQuery('')
                     }
                   }}
                   className="relative"

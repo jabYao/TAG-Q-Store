@@ -77,3 +77,13 @@ export async function uploadPromotionImage(file: File): Promise<ImageUploadResul
   })
   return data.data
 }
+
+export async function uploadBrandLogo(file: File): Promise<ImageUploadResult> {
+  const formData = new FormData()
+  formData.append('image', file)
+
+  const { data } = await api.post<{ data: ImageUploadResult }>('/admin/imagenes/marca', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data.data
+}

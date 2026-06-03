@@ -224,6 +224,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('/imagenes/banner', [ImageController::class, 'uploadBannerImage']);
     Route::post('/imagenes/hero', [ImageController::class, 'uploadHeroImage']);
     Route::post('/imagenes/promocion', [ImageController::class, 'uploadPromotionImage']);
+    Route::post('/imagenes/marca', [ImageController::class, 'uploadBrandLogo']);
 });
 
 // ─── Webhooks Wompi (no auth) ───

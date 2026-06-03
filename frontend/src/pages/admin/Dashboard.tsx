@@ -74,7 +74,7 @@ export default function Dashboard() {
           {kpi?.recent_orders?.length > 0 ? kpi.recent_orders.map((o: any) => {
             const st = statusLabels[o.status] ?? { label: o.status, color: 'bg-gray-100 text-gray-700' }
             return (
-              <Link key={o.id} to={`/admin/pedidos/${o.id}`} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors">
+              <Link key={o.id} to={`/admin/pedidos/${o.order_number}`} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors">
                 <div>
                   <p className="text-sm font-medium text-carbon">
                     {o.order_number}

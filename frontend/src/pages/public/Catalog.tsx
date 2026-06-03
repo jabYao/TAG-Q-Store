@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchProducts, fetchFilterOptions, fetchColors } from '@/api'
+import { fetchBrands } from '@/api/brands'
 import ProductCard from '@/components/ProductCard'
 import CatalogFilters, { sortOptions } from '@/components/CatalogFilters'
 import Breadcrumbs from '@/components/Breadcrumbs'
@@ -12,8 +13,13 @@ const ITEMS_PER_PAGE = 12
 
 export default function Catalog() {
   const [searchParams] = useSearchParams()
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('categoria') || '')
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([])
+  const { slug } = useParams<{ slug?: string }>()
+  const categoriaParam = searchParams.get('categoria') || ''
+  const marcaParam = searchParams.get('marca') || ''
+  const [selectedCategory, setSelectedCategory] = useState(slug || categoriaParam || '')
+  const searchQuery = searchParams.get('busqueda') || ''
+  const [selectedBrand, setSelectedBrand] = useState<string>(marcaParam || '')
+  const [onSale, setOnSale] = useState(false)
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000])
   const [sortBy, setSortBy] = useState('recent')
   const [selectedFilterIds, setSelectedFilterIds] = useState<number[]>([])
@@ -21,6 +27,14 @@ export default function Catalog() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isMobile, setIsMobile] = useState(false)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+
+  // Sync selectedCategory and selectedBrand from URL params whenever they change
+  useEffect(() => {
+    const categoryFromUrl = slug || categoriaParam || ''
+    setSelectedCategory(categoryFromUrl)
+    setSelectedBrand(marcaParam || '')
+    setCurrentPage(1)
+  }, [slug, categoriaParam, marcaParam])
 
   // Detect mobile for filter behavior
   useEffect(() => {
@@ -43,10 +57,19 @@ export default function Catalog() {
     staleTime: 300_000,
   })
 
+  const { data: brands } = useQuery({
+    queryKey: ['brands', 'catalog'],
+    queryFn: () => fetchBrands(),
+    staleTime: 300_000,
+  })
+
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['products', 'catalog', selectedCategory, selectedBrands, priceRange, sortBy, selectedFilterIds, selectedColorIds, currentPage],
+    queryKey: ['products', 'catalog', searchQuery, selectedCategory, selectedBrand, onSale, priceRange, sortBy, selectedFilterIds, selectedColorIds, currentPage],
     queryFn: () => fetchProducts({
+      search: searchQuery || undefined,
       category: selectedCategory || undefined,
+      brand: selectedBrand || undefined,
+      on_sale: onSale || undefined,
       min_price: priceRange[0] > 0 ? priceRange[0] : undefined,
       max_price: priceRange[1] < 1000000 ? priceRange[1] : undefined,
       sort: sortBy,
@@ -69,7 +92,8 @@ export default function Catalog() {
 
   const clearFilters = () => {
     setSelectedCategory('')
-    setSelectedBrands([])
+    setSelectedBrand('')
+    setOnSale(false)
     setPriceRange([0, 1000000])
     setSelectedFilterIds([])
     setSelectedColorIds([])
@@ -77,7 +101,7 @@ export default function Catalog() {
   }
 
   const hasActiveFilters = selectedCategory || selectedFilterIds.length > 0 ||
-    selectedColorIds.length > 0 || selectedBrands.length > 0 || priceRange[0] > 0 || priceRange[1] < 1000000
+    selectedColorIds.length > 0 || !!selectedBrand || onSale || priceRange[0] > 0 || priceRange[1] < 1000000
 
   const categoryName = selectedCategory ? selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1) : 'Catálogo'
 
@@ -115,7 +139,7 @@ export default function Catalog() {
       <SEO
         title={categoryName}
         description={`Explorá nuestro catálogo de relojes${selectedCategory ? ` en ${selectedCategory}` : ''}. Encontrá el estilo perfecto con envío gratis desde $400.000 COP.`}
-        url={`/catalogo${selectedCategory ? `?categoria=${selectedCategory}` : ''}`}
+        url={slug ? `/categoria/${slug}` : selectedCategory ? `/catalogo?categoria=${selectedCategory}` : '/catalogo'}
       />
       <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
         {/* Breadcrumbs */}
@@ -125,10 +149,10 @@ export default function Catalog() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold text-carbon">
-              {searchParams.get('categoria')
-                ? `Categoría: ${searchParams.get('categoria')}`
-                : searchParams.get('busqueda')
-                  ? `Búsqueda: "${searchParams.get('busqueda')}"`
+              {slug
+                ? `Categoría: ${selectedCategory}`
+                : searchQuery
+                  ? `Búsqueda: "${searchQuery}"`
                   : 'Catálogo'}
             </h1>
             <p className="text-sm text-gray-400 mt-1">
@@ -180,10 +204,15 @@ export default function Catalog() {
                 <CatalogFilters
                   groups={filterGroups}
                   colors={allColors ?? []}
+                  brands={brands ?? []}
                   selectedIds={selectedFilterIds}
                   selectedColorIds={selectedColorIds}
+                  selectedBrand={selectedBrand}
+                  onSale={onSale}
                   onToggle={handleToggleFilter}
                   onToggleColor={handleToggleColor}
+                  onToggleBrand={(slug) => { setCurrentPage(1); setSelectedBrand(prev => prev === slug ? '' : slug) }}
+                  onToggleOnSale={() => { setCurrentPage(1); setOnSale(prev => !prev) }}
                   onClear={clearFilters}
                   hasActiveFilters={!!hasActiveFilters}
                   onClose={() => setShowMobileFilters(false)}

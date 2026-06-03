@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchProducts, fetchCategories, fetchBrands, fetchHeroes, fetchBanners } from '@/api'
 import type { HeroData } from '@/api/banners'
@@ -39,22 +40,13 @@ const categoryMeta: Record<string, { emoji: string; imageUrl: string }> = {
     emoji: '👔',
     imageUrl: 'https://res.cloudinary.com/dg6iut6sl/image/upload/v1779479177/imagen-caballero-cateogoria._ypo79i.png',
   },
-  branded: {
-    emoji: '⭐',
+  ofertas: {
+    emoji: '🔥',
     imageUrl: 'https://res.cloudinary.com/dg6iut6sl/image/upload/v1779478924/promociones_h5ocxe.png',
   },
 }
 
-const brandNames = [
-  { name: 'TOMMY\nHILFIGER', color: 'text-primary' },
-  { name: 'CASIO', color: 'text-carbon' },
-  { name: 'TITAN', color: 'text-primary' },
-  { name: 'GUESS', color: 'text-carbon' },
-  { name: 'CITIZEN', color: 'text-primary' },
-  { name: 'MICHAEL\nKORS', color: 'text-carbon' },
-  { name: 'TIMEX', color: 'text-primary' },
-  { name: 'FOSSIL', color: 'text-carbon' },
-]
+const brandColors = ['text-primary', 'text-carbon', 'text-primary', 'text-carbon']
 
 const FALLBACK_HERO = {
   title: "Timex Men Leather Straps Analogue Watch",
@@ -64,9 +56,17 @@ const FALLBACK_HERO = {
 }
 
 export default function Home() {
+  const [showAllBrands, setShowAllBrands] = useState(false)
+
   const { data: heroes, isLoading: heroLoading } = useQuery({
     queryKey: ['heroes', 'home'],
     queryFn: fetchHeroes,
+  })
+
+  const { data: brands } = useQuery({
+    queryKey: ['brands', 'home'],
+    queryFn: () => fetchBrands(),
+    staleTime: 300_000,
   })
 
   const { data: promoBanners } = useQuery({
@@ -240,17 +240,36 @@ export default function Home() {
             Trabajamos con las mejores marcas del mundo
           </p>
 
-          <div className="flex md:grid md:grid-cols-4 lg:grid-cols-8 gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide md:overflow-visible md:snap-none pb-2 md:pb-0 items-center">
-            {brandNames.map((brand, i) => (
-              <div key={i} className="snap-start shrink-0 md:shrink md:w-auto">
-                <div className="w-24 h-24 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
-                  <span className={`text-2xl font-bold ${brand.color} text-center leading-tight text-xs`}>
-                    {brand.name}
+          <div className="flex flex-wrap justify-center gap-4 items-center">
+            {brands?.slice(0, showAllBrands ? undefined : 8).map((brand, i) => (
+              <a key={brand.id} href={`/catalogo?marca=${brand.slug}`}
+                className="w-24 h-24 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 shrink-0">
+                {brand.logo_url ? (
+                  <img src={brand.logo_url} alt={brand.name} className="w-16 h-16 object-contain" />
+                ) : (
+                  <span className={`text-2xl font-bold ${brandColors[i % brandColors.length]} text-center leading-tight text-xs`}>
+                    {brand.name.replace(/ /g, '\n')}
                   </span>
-                </div>
-              </div>
+                )}
+              </a>
             ))}
+            {(!brands || brands.length === 0) && (
+              <div className="text-center text-sm text-gray-400 py-8 w-full">
+                No hay marcas disponibles
+              </div>
+            )}
           </div>
+
+          {(brands && brands.length > 8) && (
+            <div className="text-center mt-6">
+              <button
+                onClick={() => setShowAllBrands(!showAllBrands)}
+                className="inline-block bg-primary text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors"
+              >
+                {showAllBrands ? 'VER MENOS' : `VER TODO (${brands.length})`}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

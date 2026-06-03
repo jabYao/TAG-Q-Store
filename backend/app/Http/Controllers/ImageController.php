@@ -199,4 +199,35 @@ class ImageController extends Controller
             ],
         ], 201);
     }
+
+    /**
+     * Upload a brand logo.
+     */
+    public function uploadBrandLogo(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,webp,svg|max:5120', // 5MB
+            'public_id' => 'nullable|string',
+        ]);
+
+        $file = $request->file('image');
+
+        $result = $this->cloudinary->upload($file, [
+            'folder' => 'tag-q/marca',
+            'public_id' => $validated['public_id'] ?? null,
+            'transformation' => [
+                'quality' => 'auto:best',
+                'fetch_format' => 'auto',
+                'width' => 400,
+                'crop' => 'limit',
+            ],
+        ]);
+
+        return response()->json([
+            'data' => [
+                'url' => $result['secure_url'],
+                'public_id' => $result['public_id'],
+            ],
+        ], 201);
+    }
 }

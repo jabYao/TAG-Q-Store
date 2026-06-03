@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ColorData } from '@/api/colors'
 
 // ── Data ──
@@ -18,9 +19,9 @@ export interface FilterGroupOption {
 
 export const sortOptions = [
   { value: 'recent', label: 'Más recientes' },
-  { value: 'price-asc', label: 'Precio: menor a mayor' },
-  { value: 'price-desc', label: 'Precio: mayor a menor' },
-  { value: 'best-sellers', label: 'Más vendidos' },
+  { value: 'price_asc', label: 'Precio: menor a mayor' },
+  { value: 'price_desc', label: 'Precio: mayor a menor' },
+  { value: 'best_sellers', label: 'Más vendidos' },
   { value: 'newest', label: 'Nuevos' },
 ]
 
@@ -29,10 +30,15 @@ export const sortOptions = [
 interface CatalogFiltersProps {
   groups: FilterGroupOption[]
   colors: ColorData[]
+  brands: { id: number; name: string; slug: string }[]
   selectedIds: number[]
   selectedColorIds: number[]
+  selectedBrand: string
+  onSale: boolean
   onToggle: (valueId: number, group: FilterGroupOption) => void
   onToggleColor: (colorId: number) => void
+  onToggleBrand: (slug: string) => void
+  onToggleOnSale: () => void
   onClear: () => void
   onClose?: () => void
   hasActiveFilters: boolean
@@ -53,8 +59,11 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
 
 // ── Component ──
 
+const FEATURED_COLORS = ['plateado', 'dorado']
+
 export default function CatalogFilters(props: CatalogFiltersProps) {
-  const activeCount = props.selectedIds.length + props.selectedColorIds.length
+  const [showAllColors, setShowAllColors] = useState(false)
+  const activeCount = props.selectedIds.length + props.selectedColorIds.length + (props.selectedBrand ? 1 : 0) + (props.onSale ? 1 : 0)
 
   return (
     <aside className="w-full lg:w-[280px] shrink-0">
@@ -74,10 +83,37 @@ export default function CatalogFilters(props: CatalogFiltersProps) {
           </div>
         )}
 
+        {/* Brands */}
+        <FilterSection title="Marca">
+          <ul className="space-y-1">
+            {props.brands.map((brand) => {
+              const isSelected = props.selectedBrand === brand.slug
+              return (
+                <li key={brand.id}>
+                  <label className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer text-sm transition-colors ${
+                    isSelected ? 'bg-primary/5 text-primary font-medium' : 'text-carbon hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="brand-filter"
+                      checked={isSelected}
+                      onChange={() => props.onToggleBrand(brand.slug)}
+                      className="accent-primary"
+                    />
+                    {brand.name}
+                  </label>
+                </li>
+              )
+            })}
+          </ul>
+        </FilterSection>
+
         {/* Color swatches */}
         <FilterSection title="Color">
           <div className="flex flex-wrap gap-2">
             {props.colors.map((color) => {
+              const isFeatured = FEATURED_COLORS.includes(color.slug)
+              if (!isFeatured && !showAllColors) return null
               const isSelected = props.selectedColorIds.includes(color.id)
               return (
                 <button
@@ -98,6 +134,23 @@ export default function CatalogFilters(props: CatalogFiltersProps) {
                 </button>
               )
             })}
+            {!showAllColors && props.colors.length > FEATURED_COLORS.length && (
+              <button
+                onClick={() => setShowAllColors(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-primary border border-dashed border-gray-300 hover:border-primary transition-all"
+              >
+                +{props.colors.length - FEATURED_COLORS.length} más
+                <span className="text-xs">▾</span>
+              </button>
+            )}
+            {showAllColors && (
+              <button
+                onClick={() => setShowAllColors(false)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-primary border border-dashed border-gray-300 hover:border-primary transition-all w-full justify-center mt-1"
+              >
+                <span className="text-xs">▴</span> Mostrar menos
+              </button>
+            )}
           </div>
         </FilterSection>
 
@@ -136,6 +189,21 @@ export default function CatalogFilters(props: CatalogFiltersProps) {
             </ul>
           </FilterSection>
         ))}
+
+        {/* Ofertas */}
+        <FilterSection title="Ofertas">
+          <label className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer text-sm transition-colors ${
+            props.onSale ? 'bg-primary/5 text-primary font-medium' : 'text-carbon hover:bg-gray-50'
+          }`}>
+            <input
+              type="checkbox"
+              checked={props.onSale}
+              onChange={props.onToggleOnSale}
+              className="accent-primary w-4 h-4 rounded border-gray-300"
+            />
+            <span>🔥 Solo productos en oferta</span>
+          </label>
+        </FilterSection>
 
         {/* Clear */}
         <button

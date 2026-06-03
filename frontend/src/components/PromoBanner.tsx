@@ -25,7 +25,7 @@ export default function PromoBanner({
       {imageUrl && (
         <div className="absolute inset-0 flex justify-end">
           <div
-            className="w-3/4 h-full bg-cover bg-center opacity-30 md:opacity-40"
+            className="w-3/4 h-full bg-cover bg-center"
             style={{ backgroundImage: `url(${imageUrl})`, aspectRatio: '16/9' }}
           />
         </div>

@@ -30,7 +30,13 @@ class ProductController extends Controller implements HasMiddleware
 
         // Filtros
         if ($request->filled('category')) {
-            $query->whereHas('category', fn($q) => $q->where('slug', $request->category));
+            if ($request->category === 'ofertas') {
+                // 'Ofertas' es dinámico: muestra todos los productos con descuento
+                $query->whereNotNull('original_price')
+                      ->whereColumn('original_price', '>', 'price');
+            } else {
+                $query->whereHas('category', fn($q) => $q->where('slug', $request->category));
+            }
         }
 
         if ($request->filled('brand')) {
@@ -79,12 +85,18 @@ class ProductController extends Controller implements HasMiddleware
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhereHas('brand', fn($b) => $b->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('brand', fn($b) => $b->where('name', 'like', "%{$search}%"))
+                    ->orWhereRaw('LOWER(CAST(specs AS CHAR)) LIKE ?', ['%' . mb_strtolower($search) . '%']);
             });
         }
 
         if ($request->boolean('featured')) {
             $query->featured();
+        }
+
+        if ($request->boolean('on_sale')) {
+            $query->whereNotNull('original_price')
+                  ->whereColumn('original_price', '>', 'price');
         }
 
         // Ordenamiento
@@ -304,11 +316,21 @@ class ProductController extends Controller implements HasMiddleware
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('sku', 'like', "%{$search}%")
-                    ->orWhereHas('brand', fn($b) => $b->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('brand', fn($b) => $b->where('name', 'like', "%{$search}%"))
+                    ->orWhereRaw('LOWER(CAST(specs AS CHAR)) LIKE ?', ['%' . mb_strtolower($search) . '%']);
             });
         }
 
-        if ($request->filled('category') && is_numeric($request->category)) {
+        if ($request->boolean('on_sale')) {
+            $query->whereNotNull('original_price')
+                  ->whereColumn('original_price', '>', 'price');
+        }
+
+        if ($request->filled('category') && $request->category === 'ofertas') {
+            // 'Ofertas' es dinámico: muestra todos los productos con descuento
+            $query->whereNotNull('original_price')
+                  ->whereColumn('original_price', '>', 'price');
+        } elseif ($request->filled('category') && is_numeric($request->category)) {
             $query->where('category_id', $request->category);
         } elseif ($request->filled('category')) {
             $query->whereHas('category', fn($q) => $q->where('slug', $request->category));

@@ -40,10 +40,11 @@ class ContactController extends Controller
                 "Teléfono: {$phone}\n" .
                 "Asunto: {$subject}\n\n" .
                 "Mensaje:\n{$validated['message']}",
-                function ($mail) use ($adminEmail, $validated) {
-                    $mail->from($validated['email'], $validated['name'])
+                function ($mail) use ($adminEmail, $validated, $subject) {
+                    $mail->from($adminEmail, config('app.name', 'TAG-Q'))
+                        ->replyTo($validated['email'], $validated['name'])
                         ->to($adminEmail)
-                        ->subject('Nuevo mensaje de contacto: ' . $subject);
+                        ->subject('Contacto WEB - ' . $subject . ' - ' . $validated['name']);
                 }
             );
         } catch (\Exception $e) {
