@@ -141,11 +141,12 @@ export default function OrderDetail() {
             <div className="space-y-3">
               {order.statuses?.map((s: any, i: number) => {
                 const st = statusLabels[s.status] ?? { label: s.status, color: 'bg-gray-100 text-gray-700' }
+                const statusesLen = order.statuses!.length
                 return (
                   <div key={i} className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <div className={`w-3 h-3 rounded-full ${i === order.statuses.length - 1 ? 'bg-primary' : 'bg-gray-300'}`} />
-                      {i < order.statuses.length - 1 && <div className="w-px h-full bg-gray-200 my-1" />}
+                      <div className={`w-3 h-3 rounded-full ${i === statusesLen - 1 ? 'bg-primary' : 'bg-gray-300'}`} />
+                      {i < statusesLen - 1 && <div className="w-px h-full bg-gray-200 my-1" />}
                     </div>
                     <div className="pb-3">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st.color}`}>{st.label}</span>

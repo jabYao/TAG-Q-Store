@@ -9,7 +9,7 @@ import PromoBanner from '@/components/PromoBanner'
 import SEO from '@/components/SEO'
 import { HeroSkeleton, ProductGridSkeleton, CategoryCardSkeleton } from '@/components/Skeleton'
 
-function toProductCard(p: { id: number; name: string; slug: string; price: number; original_price: number | null; primary_image: string | null; thumbnail: string | null; is_featured: boolean; is_new: boolean; discount_percent: number | null; sku: string; is_out_of_stock?: boolean }) {
+function toProductCard(p: { id: number; name: string; slug: string; price: number; original_price: number | null; primary_image: string | null; thumbnail?: string | null; is_featured: boolean; is_new: boolean; discount_percent: number | null; sku: string; is_out_of_stock?: boolean }) {
   const badge = p.discount_percent && p.discount_percent >= 10
     ? { label: `-${p.discount_percent}%`, variant: 'gold' as const }
     : p.is_new

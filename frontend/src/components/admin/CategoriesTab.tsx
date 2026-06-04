@@ -10,7 +10,7 @@ export default function CategoriesTab() {
   const [editForm, setEditForm] = useState<CategoryFormData>({ name: '' })
   const [isCreating, setIsCreating] = useState(false)
 
-  const { data: categories, isLoading } = useQuery({
+  const { data: categories } = useQuery({
     queryKey: ['categories', 'admin'],
     queryFn: () => fetchCategories(),
   })
@@ -108,7 +108,7 @@ export default function CategoriesTab() {
                 <p className="text-[10px] text-gray-300 truncate">/{cat.slug}</p>
               </div>
               <div className="flex gap-2 text-xs shrink-0">
-                <button onClick={() => { setEditingId(cat.id); setEditForm({ name: cat.name, description: cat.description }) }}
+                <button onClick={() => { setEditingId(cat.id); setEditForm({ name: cat.name, description: cat.description ?? '' }) }}
                   className="text-primary hover:underline">Editar</button>
                 <button onClick={() => { if (window.confirm(`¿Eliminar "${cat.name}"?`)) deleteMutation.mutate(cat.id) }}
                   className="text-red-500 hover:underline">Eliminar</button>

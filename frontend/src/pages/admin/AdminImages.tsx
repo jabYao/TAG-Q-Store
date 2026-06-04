@@ -44,7 +44,7 @@ export default function AdminImages() {
 
   const uploadMutation = useMutation({
     mutationFn: async ({ bannerId, file }: { bannerId: number; file: File }) => {
-      setUploadError(null)
+      _setUploadError(null)
       const result = await uploadBannerImage(file)
       await api.put(`/admin/banners/${bannerId}`, { image_url: result.url, is_active: true })
       return result
@@ -55,7 +55,7 @@ export default function AdminImages() {
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message || err?.message || 'Error al subir la imagen'
-      setUploadError(msg)
+      _setUploadError(msg)
       toast.error('❌ ' + msg)
     },
   })

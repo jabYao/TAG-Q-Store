@@ -13,7 +13,7 @@ export default function HeroBanner({ title, subtitle, cta, ctaLink, imageUrl }: 
         <img
           src={imageUrl}
           alt=""
-          fetchpriority="high"
+          fetchPriority="high"
           decoding="async"
           className="absolute inset-0 w-full h-full object-cover opacity-20"
         />

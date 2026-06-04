@@ -13,7 +13,7 @@ export default function BrandsTab() {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
 
-  const { data: brands, isLoading } = useQuery({
+  const { data: brands } = useQuery({
     queryKey: ['brands', 'admin'],
     queryFn: () => fetchBrands(),
   })
@@ -155,7 +155,7 @@ export default function BrandsTab() {
           ) : (
             <div key={brand.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-gray-200 transition-colors group">
               <div className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0 overflow-hidden p-1"
-                onClick={() => { setEditingId(brand.id); setEditForm({ name: brand.name, slug: brand.slug, description: brand.description, logo_url: brand.logo_url }) }}>
+                onClick={() => { setEditingId(brand.id); setEditForm({ name: brand.name, slug: brand.slug, description: brand.description ?? '', logo_url: brand.logo_url ?? undefined }) }}>
                 {brand.logo_url ? (
                   <img src={brand.logo_url} alt={brand.name} className="w-full h-full object-contain" />
                 ) : (
@@ -168,7 +168,7 @@ export default function BrandsTab() {
                 <p className="text-[10px] text-gray-300 truncate">/{brand.slug}</p>
               </div>
               <div className="flex gap-2 text-xs shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => { setEditingId(brand.id); setEditForm({ name: brand.name, slug: brand.slug, description: brand.description, logo_url: brand.logo_url }) }}
+                <button onClick={() => { setEditingId(brand.id); setEditForm({ name: brand.name, slug: brand.slug, description: brand.description ?? '', logo_url: brand.logo_url ?? undefined }) }}
                   className="text-primary hover:underline">Editar</button>
                 <button onClick={() => { if (window.confirm(`¿Eliminar "${brand.name}"?`)) deleteMutation.mutate(brand.id) }}
                   className="text-red-500 hover:underline">Eliminar</button>

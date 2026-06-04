@@ -13,7 +13,7 @@ export default function SearchOverlay({ query, visible, onSelect, onViewAll }: S
   const navigate = useNavigate()
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 

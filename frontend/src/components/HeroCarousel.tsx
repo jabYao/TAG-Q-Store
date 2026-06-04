@@ -35,7 +35,7 @@ export default function HeroCarousel({ slides, interval = 5000 }: HeroCarouselPr
         <img
           src={slide.imageUrl}
           alt=""
-          fetchpriority={current === 0 ? 'high' : undefined}
+          fetchPriority={current === 0 ? 'high' : undefined}
           className="absolute inset-0 w-full h-full object-cover opacity-55"
         />
       )}

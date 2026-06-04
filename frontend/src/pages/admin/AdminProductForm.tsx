@@ -172,10 +172,10 @@ export default function AdminProductForm() {
       }
 
       if (isEditing) {
-        await updateProduct(Number(id), payload)
+        await updateProduct(Number(id), payload as ProductFormData)
         toast.success('Producto actualizado correctamente')
       } else {
-        await createProduct(payload)
+        await createProduct(payload as ProductFormData)
         toast.success('Producto creado correctamente')
       }
 

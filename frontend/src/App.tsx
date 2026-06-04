@@ -8,7 +8,6 @@ import AdminLayout from '@/components/AdminLayout'
 import PrivateRoute from '@/components/PrivateRoute'
 import AdminRoute from '@/components/AdminRoute'
 import GuestRoute from '@/components/GuestRoute'
-import { PageSkeleton } from '@/components/PageSkeleton'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import ToastContainer from '@/components/Toast'
 
