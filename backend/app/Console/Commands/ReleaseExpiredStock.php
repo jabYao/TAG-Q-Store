@@ -11,20 +11,33 @@ use Sentry\Laravel\Facade as Sentry;
 class ReleaseExpiredStock extends Command
 {
     protected $signature = 'orders:release-expired-stock
-        {--minutes=30 : Minutos de tolerancia antes de liberar stock de órdenes pendientes}';
+        {--pending-minutes=30 : Minutos de tolerancia para órdenes pendientes (Wompi)}'.
+        '{--contraentrega-hours=144 : Horas de tolerancia para contraentrega}';
+
+    private const CONTRADELIVERY_TTL = 144; // 6 días
 
     protected $description = 'Libera el stock de órdenes en estado pendiente que superaron el tiempo de expiración';
 
     public function handle(): int
     {
-        $minutes = (int) $this->option('minutes');
-        $cutoff = now()->subMinutes($minutes);
+        $pendingMinutes = (int) $this->option('pending-minutes');
+        $contraentregaHours = (int) $this->option('contraentrega-hours');
 
-        $this->info("Buscando órdenes pendientes creadas antes de {$cutoff->toDateTimeString()}...");
+        $pendingCutoff = now()->subMinutes($pendingMinutes);
+        $contraentregaCutoff = now()->subHours($contraentregaHours);
 
-        // Buscar órdenes pending o contraentrega_pending que estén vencidas
-        $expiredOrders = Order::whereIn('status', ['pending', 'contraentrega_pending'])
-            ->where('created_at', '<=', $cutoff)
+        $this->info("Buscando órdenes vencidas...");
+        $this->line("  - Pending (Wompi): creadas antes de {$pendingCutoff->toDateTimeString()}");
+        $this->line("  - Contraentrega: creadas antes de {$contraentregaCutoff->toDateTimeString()}");
+
+        // Buscar órdenes vencidas según su tipo
+        $expiredOrders = Order::where(function ($q) use ($pendingCutoff, $contraentregaCutoff) {
+                $q->where('status', 'pending')
+                  ->where('created_at', '<=', $pendingCutoff);
+            })->orWhere(function ($q) use ($pendingCutoff, $contraentregaCutoff) {
+                $q->where('status', 'contraentrega_pending')
+                  ->where('created_at', '<=', $contraentregaCutoff);
+            })
             ->with('items.product')
             ->get();
 
@@ -58,7 +71,9 @@ class ReleaseExpiredStock extends Command
                 OrderStatus::create([
                     'order_id' => $order->id,
                     'status' => 'expired',
-                    'comment' => "Stock liberado automáticamente después de {$minutes} minutos sin pago.",
+                    'comment' => $order->status === 'contraentrega_pending'
+                        ? "Stock liberado automáticamente después de {$contraentregaHours} horas (" . round($contraentregaHours / 24) . " d\303\255as) sin confirmar entrega."
+                        : "Stock liberado automáticamente después de {$pendingMinutes} minutos sin pago.",
                 ]);
 
                 $this->info("  → Orden {$order->order_number} expirada, stock liberado.");

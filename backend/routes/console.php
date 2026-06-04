@@ -19,5 +19,8 @@ Artisan::command('payments:retry-pending:regular', function () {
 
 // Release expired stock every 10 minutes
 Artisan::command('orders:release-expired-stock:regular', function () {
-    $this->call('orders:release-expired-stock', ['--minutes' => 30]);
-})->purpose('Liberar stock de órdenes pendientes vencidas cada 10 minutos')->everyTenMinutes();
+    $this->call('orders:release-expired-stock', [
+        '--pending-minutes' => 30,
+        '--contraentrega-hours' => 144,
+    ]);
+})->purpose('Liberar stock de órdenes vencidas (pending: 30min, contraentrega: 72h) cada 10 minutos')->everyTenMinutes();

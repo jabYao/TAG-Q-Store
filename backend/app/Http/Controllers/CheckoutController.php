@@ -7,11 +7,13 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatus;
 use App\Models\Payment;
+use App\Models\Product;
 use App\Models\Setting;
 use App\Services\CloudinaryService;
 use App\Services\WompiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
@@ -168,45 +170,79 @@ class CheckoutController extends Controller
             $cart->update(['status' => 'converted']);
         }
 
-        // Calculate totals
-        $shippingFreeMinimum = (int) Setting::getValue('envio_gratis_minimo', self::SHIPPING_FREE_MINIMUM);
-        $shippingCost = $subtotal >= $shippingFreeMinimum ? 0 : 15000;
-        $discount = 0;
-        $tax = round($subtotal * self::TAX_PERCENTAGE / 100, 2);
-        $total = round($subtotal + $shippingCost + $tax - $discount, 2);
+        // ── Transacción atómica con lockForUpdate ──
+        try {
+            $result = DB::transaction(function () use ($orderItemsData, $user, $address, $validated, $subtotal) {
+            // 1. Lock all products (ordenados por ID para evitar deadlocks)
+            $productIds = array_column($orderItemsData, 'product_id');
+            $lockedProducts = Product::whereIn('id', $productIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
 
-        // Create order
-        $isInternal = $user->hasRole('admin') || $user->hasRole('operador');
+            // 2. Re-validar stock contra datos frescos y bloqueados
+            foreach ($orderItemsData as $data) {
+                $product = $lockedProducts->get($data['product_id']);
+                if (!$product) {
+                    throw new \Exception('Producto no encontrado.');
+                }
+                if ($data['quantity'] > $product->stock) {
+                    throw new \Exception("Stock insuficiente para {$product->name}.");
+                }
+            }
 
-        $order = Order::create([
-            'order_number' => 'TAG-' . strtoupper(Str::random(8)),
-            'user_id' => $user->id,
-            'address_id' => $address->id,
-            'subtotal' => $subtotal,
-            'shipping_cost' => $shippingCost,
-            'discount' => $discount,
-            'tax' => $tax,
-            'total' => $total,
-            'status' => $validated['payment_method'] === 'contraentrega' ? 'contraentrega_pending' : 'pending',
-            'payment_method' => $validated['payment_method'],
-            'payment_status' => 'pending',
-            'is_internal' => $isInternal,
-            'notes' => $validated['notes'] ?? null,
-        ]);
+            // 3. Calcular totales
+            $shippingFreeMinimum = (int) Setting::getValue('envio_gratis_minimo', self::SHIPPING_FREE_MINIMUM);
+            $shippingCost = $subtotal >= $shippingFreeMinimum ? 0 : 15000;
+            $discount = 0;
+            $tax = round($subtotal * self::TAX_PERCENTAGE / 100, 2);
+            $total = round($subtotal + $shippingCost + $tax - $discount, 2);
+            $isInternal = $user->hasRole('admin') || $user->hasRole('operador');
 
-        // Create order items and decrement stock
-        foreach ($orderItemsData as $data) {
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $data['product_id'],
-                'product_name' => $data['product_name'],
-                'product_sku' => $data['product_sku'],
-                'unit_price' => $data['unit_price'],
-                'quantity' => $data['quantity'],
-                'total' => $data['total'],
+            // 4. Crear orden
+            $order = Order::create([
+                'order_number' => 'TAG-' . strtoupper(Str::random(8)),
+                'user_id' => $user->id,
+                'address_id' => $address->id,
+                'subtotal' => $subtotal,
+                'shipping_cost' => $shippingCost,
+                'discount' => $discount,
+                'tax' => $tax,
+                'total' => $total,
+                'status' => $validated['payment_method'] === 'contraentrega' ? 'contraentrega_pending' : 'pending',
+                'payment_method' => $validated['payment_method'],
+                'payment_status' => 'pending',
+                'is_internal' => $isInternal,
+                'notes' => $validated['notes'] ?? null,
             ]);
 
-            $data['product']->decrement('stock', $data['quantity']);
+            // 5. Crear items y decrementar stock (usando modelos bloqueados)
+            foreach ($orderItemsData as $data) {
+                $product = $lockedProducts->get($data['product_id']);
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $data['product_id'],
+                    'product_name' => $data['product_name'],
+                    'product_sku' => $data['product_sku'],
+                    'unit_price' => $data['unit_price'],
+                    'quantity' => $data['quantity'],
+                    'total' => $data['total'],
+                ]);
+
+                $product->decrement('stock', $data['quantity']);
+            }
+
+                return $order;
+            });
+
+            $order = $result;
+            $total = (float) $order->total;
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage() ?: 'Error al procesar la orden. Intentalo de nuevo.',
+            ], 422);
         }
 
         // Log status

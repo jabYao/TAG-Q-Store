@@ -67,6 +67,7 @@ export default function AdminProductForm() {
     'tamano_caja', 'resistencia_agua', 'forma_caja',
     'grosor', 'origen', 'cristal', 'garantia',
     'tipo_cierre', 'tipo_esfera', 'modelo_referencia',
+    'color_correa', 'color_bisel', 'color_esfera', 'color_caja',
   ]
 
   const [specEntries, setSpecEntries] = useState<{ key: string; value: string }[]>([])
