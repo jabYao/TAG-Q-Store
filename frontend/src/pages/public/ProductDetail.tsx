@@ -7,6 +7,7 @@ import ProductCard from '@/components/ProductCard'
 import SEO from '@/components/SEO'
 import { DetailSkeleton } from '@/components/Skeleton'
 import { toast } from '@/stores/toastStore'
+import { useCartStore } from '@/stores/cartStore'
 import Button from '@/components/ui/Button'
 
 function QuantitySelector({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -58,7 +59,18 @@ export default function ProductDetail() {
   const addToCartMutation = useMutation({
     mutationFn: () => product ? addToCart(product.id, quantity) : Promise.reject(),
     onSuccess: () => {
-      if (product) toast.success(`${product.name} agregado al carrito`)
+      if (product) {
+        useCartStore.getState().addItem({
+          id: product.id,
+          product_id: product.id,
+          name: product.name,
+          slug: product.slug,
+          price: product.price,
+          quantity,
+          image_url: product.primary_image ?? '',
+        })
+        toast.success(`${product.name} agregado al carrito`)
+      }
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.message || 'Error al agregar al carrito')
