@@ -6,7 +6,7 @@ export default function AdminClients() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ['admin', 'clients', search, page],
     queryFn: async () => {
       const params = new URLSearchParams()

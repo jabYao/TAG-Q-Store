@@ -10,7 +10,7 @@ export default function AdminBrands() {
   const [editForm, setEditForm] = useState<BrandFormData>({ name: '' })
   const [isCreating, setIsCreating] = useState(false)
 
-  const { data: brands, isLoading } = useQuery({
+  const { data: brands } = useQuery({
     queryKey: ['brands', 'admin'],
     queryFn: () => fetchBrands(),
   })
@@ -114,7 +114,7 @@ export default function AdminBrands() {
                 <p className="text-[10px] text-gray-300 truncate">/{brand.slug}</p>
               </div>
               <div className="flex gap-2 text-xs shrink-0">
-                <button onClick={() => { setEditingId(brand.id); setEditForm({ name: brand.name, slug: brand.slug, description: brand.description }) }}
+                <button onClick={() => { setEditingId(brand.id); setEditForm({ name: brand.name, slug: brand.slug, description: brand.description ?? '' }) }}
                   className="text-primary hover:underline">Editar</button>
                 <button onClick={() => { if (window.confirm(`¿Eliminar "${brand.name}"?`)) deleteMutation.mutate(brand.id) }}
                   className="text-red-500 hover:underline">Eliminar</button>

@@ -31,7 +31,7 @@ export default function AdminImages() {
     },
   })
 
-  const { data: galleryImages } = useQuery({
+  const { data: _galleryImages } = useQuery({
     queryKey: ['product-images', 'gallery'],
     queryFn: async () => {
       const { data } = await api.get('/admin/imagenes')
@@ -40,7 +40,7 @@ export default function AdminImages() {
     enabled: false,
   })
 
-  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [_uploadError, _setUploadError] = useState<string | null>(null)
 
   const uploadMutation = useMutation({
     mutationFn: async ({ bannerId, file }: { bannerId: number; file: File }) => {

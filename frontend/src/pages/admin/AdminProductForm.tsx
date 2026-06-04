@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '@/api/client'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { uploadProductImage, deleteProductImage } from '@/api/images'
 import { fetchProductForEdit, createProduct, updateProduct, fetchBrands, fetchCategories, fetchAdminFilters, fetchAdminColors } from '@/api'
-import type { ProductFormData, BrandData, CategoryData, FilterGroupData } from '@/api'
-import type { ColorData } from '@/api/colors'
+import type { ProductFormData } from '@/api'
 import { toast } from '@/stores/toastStore'
 
 export default function AdminProductForm() {
@@ -90,7 +88,7 @@ export default function AdminProductForm() {
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const [uploadingMainImage, setUploadingMainImage] = useState(false)
   const [uploadingGallery, setUploadingGallery] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [saving, _setSaving] = useState(false)
 
   useEffect(() => {
     if (product) {
@@ -110,7 +108,7 @@ export default function AdminProductForm() {
         is_active: product.is_active,
         is_featured: product.is_featured,
         is_new: product.is_new,
-        specs: product.specs ?? {},
+        specs: (product.specs ?? {}) as Record<string, string>,
       })
       // Set filter value IDs from loaded product
       if (product.filter_values?.length) {
@@ -158,7 +156,7 @@ export default function AdminProductForm() {
       const specs = entriesToSpecs(specEntries)
       setForm(f => ({ ...f, specs }))
 
-      const payload: Record<string, any> = {
+      const payload: Partial<ProductFormData> & Record<string, any> = {
         ...form,
         specs,
         filter_value_ids: filterValueIds,

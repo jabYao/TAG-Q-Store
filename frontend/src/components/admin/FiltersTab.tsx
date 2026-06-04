@@ -9,7 +9,7 @@ import {
   updateFilterValue,
   deleteFilterValue,
 } from '@/api/filterOptions'
-import type { FilterGroupData, FilterGroupFormData } from '@/api/filterOptions'
+import type { FilterGroupFormData } from '@/api/filterOptions'
 import { toast } from '@/stores/toastStore'
 
 type GroupForm = FilterGroupFormData & { id?: number }

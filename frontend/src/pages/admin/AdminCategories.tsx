@@ -10,7 +10,7 @@ export default function AdminCategories() {
   const [editForm, setEditForm] = useState<CategoryFormData>({ name: '' })
   const [isCreating, setIsCreating] = useState(false)
 
-  const { data: categories, isLoading } = useQuery({
+  const { data: categories } = useQuery({
     queryKey: ['categories', 'admin'],
     queryFn: () => fetchCategories(),
   })
@@ -154,7 +154,7 @@ export default function AdminCategories() {
                 <p className="text-[10px] text-gray-300">/{cat.slug}</p>
               </div>
               <div className="flex gap-2 text-xs">
-                <button onClick={() => { setEditingId(cat.id); setEditForm({ name: cat.name, slug: cat.slug, description: cat.description }) }}
+                <button onClick={() => { setEditingId(cat.id); setEditForm({ name: cat.name, slug: cat.slug, description: cat.description ?? '' }) }}
                   className="text-primary hover:underline">Editar</button>
                 <button onClick={() => {
                   if (window.confirm(`¿Eliminar categoría "${cat.name}"?`)) deleteMutation.mutate(cat.id)

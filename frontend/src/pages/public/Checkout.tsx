@@ -13,11 +13,10 @@ const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
 
 const SHIPPING_FREE_MINIMUM = 400000
 const SHIPPING_COST = 15000
-const TAX_RATE = 0
 
 export default function Checkout() {
   const navigate = useNavigate()
-  const { items, count, total, clearCart } = useCartStore()
+  const { items, total, clearCart } = useCartStore()
   const [hydrated, setHydrated] = useState(false)
 
   // Esperar a que Zustand hidrate desde localStorage

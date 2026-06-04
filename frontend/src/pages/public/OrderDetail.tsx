@@ -32,7 +32,7 @@ export default function OrderDetail() {
     { label: 'Mi Cuenta', href: '/perfil' },
     { label: 'Mis Pedidos', href: '/mis-pedidos' },
     ...(orderNumber ? [{ label: orderNumber }] : [{ label: 'Pedido' }]),
-  ] as const
+  ]
 
   if (isLoading) {
     return (
@@ -139,7 +139,7 @@ export default function OrderDetail() {
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-sm font-semibold text-carbon mb-4 uppercase tracking-wide">Estado del pedido</h2>
             <div className="space-y-3">
-              {order.statuses.map((s: any, i: number) => {
+              {order.statuses?.map((s: any, i: number) => {
                 const st = statusLabels[s.status] ?? { label: s.status, color: 'bg-gray-100 text-gray-700' }
                 return (
                   <div key={i} className="flex gap-3">

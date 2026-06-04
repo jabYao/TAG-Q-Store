@@ -65,6 +65,9 @@ export interface ProductData {
   movement: string | null
   is_featured: boolean
   is_new: boolean
+  min_stock?: number
+  is_active?: boolean
+  thumbnail?: string | null
   specs: ProductSpecs | null
   brand: BrandData | null
   category: CategoryData | null

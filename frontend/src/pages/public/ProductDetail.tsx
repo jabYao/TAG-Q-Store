@@ -98,7 +98,7 @@ export default function ProductDetail() {
       ? product.images
       : [{ url: null, alt_text: null, is_primary: true, sort_order: 0, type: 'product', id: 0 }]
 
-    specsEntries = product.specs ? Object.entries(product.specs) : []
+    specsEntries = product.specs ? Object.entries(product.specs) as [string, string][] : []
 
     details = [
       ...(product.brand ? [{ label: 'Marca', value: product.brand.name }] : []),

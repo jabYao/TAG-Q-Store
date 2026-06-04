@@ -91,8 +91,6 @@ export default function Home() {
     queryFn: () => fetchProducts({ sort: 'recent', per_page: 4 }),
   })
 
-  const showLoading = catLoading || featLoading || newLoading
-
   return (
     <>
       <SEO
@@ -109,7 +107,7 @@ export default function Home() {
           slides={
             heroes?.length
               ? heroes.map((h: HeroData) => ({
-                  title: h.title,
+                  title: h.title || '',
                   subtitle: h.subtitle,
                   cta: h.cta_text || FALLBACK_HERO.cta,
                   ctaLink: h.cta_link || FALLBACK_HERO.ctaLink,

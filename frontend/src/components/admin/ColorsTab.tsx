@@ -10,7 +10,7 @@ export default function ColorsTab() {
   const [form, setForm] = useState<ColorFormData>({ name: '', hex: '#000000' })
   const [isCreating, setIsCreating] = useState(false)
 
-  const { data: colors, isLoading } = useQuery({
+  const { data: colors } = useQuery({
     queryKey: ['admin-colors'],
     queryFn: fetchAdminColors,
   })

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api/client'
 
@@ -22,7 +21,7 @@ export default function AdminOrders() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ['admin', 'orders', statusFilter, search, page],
     queryFn: async () => {
       const params = new URLSearchParams()

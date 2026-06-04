@@ -12,8 +12,6 @@ interface PaymentResultData {
   payment_status: string
 }
 
-const formatPrice = (amount: number) => `$${amount.toLocaleString('es-CO')}`
-
 const POLL_INTERVAL_MS = 3000
 const MAX_POLL_SECONDS = 60
 
@@ -50,7 +48,7 @@ export default function PaymentResult() {
       setResult(res.data.data)
       setLoading(false)
       return res.data.data
-    } catch (err) {
+    } catch (err: any) {
       setError(err?.response?.data?.message || 'Error al consultar el pago.')
       setLoading(false)
       return null
