@@ -50,94 +50,94 @@ const AdminLogs = lazy(() => import('@/pages/admin/AdminLogs'))
 const AdminContactMessages = lazy(() => import('@/pages/admin/AdminContactMessages'))
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
+ defaultOptions: {
+ queries: {
+ staleTime: 1000 * 60 * 5,
+ retry: 1,
+ refetchOnWindowFocus: false,
+ },
+ },
 })
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
-  const checkAuth = useAuthStore((s) => s.checkAuth)
+ const checkAuth = useAuthStore((s) => s.checkAuth)
 
-  useEffect(() => {
-    checkAuth()
-  }, [checkAuth])
+ useEffect(() => {
+ checkAuth()
+ }, [checkAuth])
 
-  return <>{children}</>
+ return <>{children}</>
 }
 
 export default function AppRouter() {
-  return (
-    <HelmetProvider>
-    <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <AuthInitializer>
-      <BrowserRouter>
-        <ToastContainer />
-        <Routes>
-          {/* Public routes */}
-          <Route element={<PublicLayout />}>
-            {/* Public — sin restricción */}
-            <Route path="/" element={<Home />} />
-            <Route path="/catalogo" element={<Catalog />} />
-            <Route path="/categoria/:slug" element={<Catalog />} />
-            <Route path="/busqueda" element={<Catalog />} />
-            <Route path="/producto/:slug" element={<ProductDetail />} />
-            <Route path="/carrito" element={<Cart />} />
-            <Route path="/landing/:slug" element={<Landing />} />
-            <Route path="/politicas" element={<Policies />} />
-            <Route path="/contacto" element={<Contact />} />
-            <Route path="/pago/resultado" element={<PaymentResult />} />
+ return (
+ <HelmetProvider>
+ <ErrorBoundary>
+ <QueryClientProvider client={queryClient}>
+ <AuthInitializer>
+ <BrowserRouter>
+ <ToastContainer />
+ <Routes>
+ {/* Public routes */}
+ <Route element={<PublicLayout />}>
+ {/* Public — sin restricción */}
+ <Route path="/" element={<Home />} />
+ <Route path="/catalogo" element={<Catalog />} />
+ <Route path="/categoria/:slug" element={<Catalog />} />
+ <Route path="/busqueda" element={<Catalog />} />
+ <Route path="/producto/:slug" element={<ProductDetail />} />
+ <Route path="/carrito" element={<Cart />} />
+ <Route path="/landing/:slug" element={<Landing />} />
+ <Route path="/politicas" element={<Policies />} />
+ <Route path="/contacto" element={<Contact />} />
+ <Route path="/pago/resultado" element={<PaymentResult />} />
 
-            {/* Solo invitados (si ya está logueado, redirige a /) */}
-            <Route element={<GuestRoute />}>
-              <Route path="/login" element={<Login />} />
-              <Route path="/registro" element={<Register />} />
-              <Route path="/recuperacion" element={<ForgotPassword />} />
-              <Route path="/recuperacion/:token" element={<ForgotPassword />} />
-            </Route>
+ {/* Solo invitados (si ya está logueado, redirige a /) */}
+ <Route element={<GuestRoute />}>
+ <Route path="/login" element={<Login />} />
+ <Route path="/registro" element={<Register />} />
+ <Route path="/recuperacion" element={<ForgotPassword />} />
+ <Route path="/recuperacion/:token" element={<ForgotPassword />} />
+ </Route>
 
-            {/* Requiere autenticación */}
-            <Route element={<PrivateRoute />}>
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/perfil" element={<Profile />} />
-              <Route path="/mis-pedidos" element={<MyOrders />} />
-              <Route path="/mis-pedidos/:id" element={<OrderDetail />} />
-              <Route path="/pedido/confirmacion/:id" element={<OrderConfirmation />} />
-              <Route path="/direcciones" element={<Addresses />} />
-            </Route>
-          </Route>
+ {/* Requiere autenticación */}
+ <Route element={<PrivateRoute />}>
+ <Route path="/checkout" element={<Checkout />} />
+ <Route path="/perfil" element={<Profile />} />
+ <Route path="/mis-pedidos" element={<MyOrders />} />
+ <Route path="/mis-pedidos/:id" element={<OrderDetail />} />
+ <Route path="/pedido/confirmacion/:id" element={<OrderConfirmation />} />
+ <Route path="/direcciones" element={<Addresses />} />
+ </Route>
+ </Route>
 
-          {/* Admin routes — requieren rol admin u operador */}
-          {/* AdminLayout ya tiene un Suspense interno para lazy loading */}
-          <Route path="/admin" element={<AdminRoute />}>
-            <Route element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="productos" element={<AdminProducts />} />
-            <Route path="productos/nuevo" element={<AdminProductForm />} />
-            <Route path="productos/:id/editar" element={<AdminProductForm />} />
-            <Route path="catalogo" element={<AdminCatalog />} />
-            <Route path="marcas" element={<AdminBrands />} />
-            <Route path="categorias" element={<AdminCategories />} />
-            <Route path="heroes" element={<AdminHeroes />} />
-            <Route path="imagenes" element={<AdminImages />} />
-            <Route path="pedidos" element={<AdminOrders />} />
-            <Route path="pedidos/:id" element={<AdminOrderDetail />} />
-            <Route path="clientes" element={<AdminClients />} />
-            <Route path="roles" element={<AdminRoles />} />
-            <Route path="configuracion" element={<AdminSettings />} />
-            <Route path="logs" element={<AdminLogs />} />
-            <Route path="mensajes" element={<AdminContactMessages />} />
-            </Route>
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </AuthInitializer>
-    </QueryClientProvider>
-    </ErrorBoundary>
-    </HelmetProvider>
-  )
+ {/* Admin routes — requieren rol admin u operador */}
+ {/* AdminLayout ya tiene un Suspense interno para lazy loading */}
+ <Route path="/admin" element={<AdminRoute />}>
+ <Route element={<AdminLayout />}>
+ <Route index element={<AdminDashboard />} />
+ <Route path="productos" element={<AdminProducts />} />
+ <Route path="productos/nuevo" element={<AdminProductForm />} />
+ <Route path="productos/:id/editar" element={<AdminProductForm />} />
+ <Route path="catalogo" element={<AdminCatalog />} />
+ <Route path="marcas" element={<AdminBrands />} />
+ <Route path="categorias" element={<AdminCategories />} />
+ <Route path="heroes" element={<AdminHeroes />} />
+ <Route path="imagenes" element={<AdminImages />} />
+ <Route path="pedidos" element={<AdminOrders />} />
+ <Route path="pedidos/:id" element={<AdminOrderDetail />} />
+ <Route path="clientes" element={<AdminClients />} />
+ <Route path="roles" element={<AdminRoles />} />
+ <Route path="configuracion" element={<AdminSettings />} />
+ <Route path="logs" element={<AdminLogs />} />
+ <Route path="mensajes" element={<AdminContactMessages />} />
+ </Route>
+ </Route>
+ </Routes>
+ </BrowserRouter>
+ </AuthInitializer>
+ </QueryClientProvider>
+ </ErrorBoundary>
+ </HelmetProvider>
+ )
 }

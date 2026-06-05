@@ -7,20 +7,20 @@ import AuthLoading from '@/components/AuthLoading'
  * Shows a spinner while auth state is being loaded.
  */
 export default function AdminRoute() {
-  const { user, authenticated, loading } = useAuthStore()
+ const { user, authenticated, loading } = useAuthStore()
 
-  if (loading) {
-    return <AuthLoading />
-  }
+ if (loading) {
+ return <AuthLoading />
+ }
 
-  if (!authenticated || !user) {
-    return <Navigate to="/login" replace />
-  }
+ if (!authenticated || !user) {
+ return <Navigate to="/login" replace />
+ }
 
-  const allowed = user.roles.some((r) => r === 'admin' || r === 'operador')
-  if (!allowed) {
-    return <Navigate to="/" replace />
-  }
+ const allowed = user.roles.some((r) => r === 'admin' || r === 'operador')
+ if (!allowed) {
+ return <Navigate to="/" replace />
+ }
 
-  return <Outlet />
+ return <Outlet />
 }

@@ -8,15 +8,15 @@ import AuthLoading from '@/components/AuthLoading'
  * Shows a spinner while auth state is being loaded.
  */
 export default function GuestRoute() {
-  const { authenticated, loading } = useAuthStore()
+ const { authenticated, loading } = useAuthStore()
 
-  if (loading) {
-    return <AuthLoading />
-  }
+ if (loading) {
+ return <AuthLoading />
+ }
 
-  if (authenticated) {
-    return <Navigate to="/" replace />
-  }
+ if (authenticated) {
+ return <Navigate to="/" replace />
+ }
 
-  return <Outlet />
+ return <Outlet />
 }
